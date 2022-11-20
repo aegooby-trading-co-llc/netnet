@@ -6,10 +6,12 @@ use std::{
 use anyhow::Error;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 use tokio::net::UdpSocket;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct Node {
     pub socket: Arc<UdpSocket>,
+    pub id: Uuid,
 }
 impl Node {
     pub fn new(port: u16) -> Result<Self, Error> {
@@ -23,6 +25,7 @@ impl Node {
         socket_2.set_broadcast(true)?;
         Ok(Self {
             socket: Arc::new(UdpSocket::from_std(socket_2.into())?),
+            id: Uuid::new_v4(),
         })
     }
     pub async fn send(&self, buffer: &[u8]) -> Result<usize, Error> {

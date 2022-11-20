@@ -15,3 +15,4 @@ tokio = { version = "1.21.2", features = ["full", "socket2", "mio", "tracing"] }
 tokio-tracing = "0.0.0"
 tokio-util = { version = "0.7.4", features = ["full"] }
 tracing-subscriber = { version = "0.3.16", features = ["regex", "tracing", "matchers", "once_cell", "parking_lot"] }
+uuid = { version = "1.2.2", features = ["v4", "fast-rng"] }
