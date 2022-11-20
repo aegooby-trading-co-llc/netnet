@@ -1,10 +1,7 @@
 use std::{str::from_utf8, time::Duration};
 
 use anyhow::Error;
-use tokio::{
-    main,
-    time::{interval, sleep},
-};
+use tokio::{main, time::interval};
 
 mod node;
 
