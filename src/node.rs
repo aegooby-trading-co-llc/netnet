@@ -8,6 +8,7 @@ use quinn::{Endpoint};
 use anyhow::Error;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 use tokio::net::UdpSocket;
+use tokio_util::{udp::UdpFramed, codec::BytesCodec};
 use uuid::Uuid;
 
 use crate::verification;
@@ -15,7 +16,7 @@ use crate::verification;
 
 #[derive(Clone)]
 pub struct Node {
-    pub socket: Arc<UdpSocket>,
+    pub stream: Arc<UdpFramed<BytesCodec>>,
     pub id: Uuid,
     pub endpoint:Endpoint
 }
@@ -31,8 +32,11 @@ impl Node {
         socket_2.set_broadcast(true)?;
         let config = verification::get_server_config().await?;
         let server_addr = "127.0.0.1:5001".parse::<SocketAddr>()?; 
+        let codec = BytesCodec::new(); 
+        let socket = UdpSocket::from_std(socket_2.into())?; 
+
         Ok(Self {
-            socket: Arc::new(UdpSocket::from_std(socket_2.into())?),
+            stream: Arc::new(UdpFramed::new(socket, codec)),
             id: Uuid::new_v4(),
             endpoint: Endpoint::server(config, server_addr)?
         })
