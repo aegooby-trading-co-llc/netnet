@@ -10,11 +10,18 @@ use uuid::Uuid;
 
 mod node;
 
+mod verification;
+
 use node::Node;
+
+// struct Peer { 
+//     timestamp: Instant, 
+//     port: u16
+// }
 
 #[main(flavor = "multi_thread")]
 pub async fn main() -> Result<(), Error> {
-    let node = Node::new(8080)?;
+    let node = Node::new(8080).await?;
     let peers = Arc::new(Mutex::new(HashMap::<Uuid, Instant>::new()));
     println!("running on port: {}", node.socket.local_addr()?.port());
     loop {
@@ -25,6 +32,7 @@ pub async fn main() -> Result<(), Error> {
         let _ = join!(
             spawn(async move {
                 let mut buf = *b"                                    ";
+                
                 let _ = reader.recv(&mut buf).await?;
                 let id = Uuid::parse_str(from_utf8(&buf)?)?;
                 if id != reader.id {
