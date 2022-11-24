@@ -6,11 +6,11 @@ use tokio::{
     sync::Mutex,
     time::{sleep, sleep_until, Instant},
 };
+use uuid::Uuid;
 
 mod node;
 
 use node::Node;
-use uuid::Uuid;
 
 #[main(flavor = "multi_thread")]
 pub async fn main() -> Result<(), Error> {
