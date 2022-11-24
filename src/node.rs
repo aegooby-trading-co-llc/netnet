@@ -3,22 +3,20 @@ use std::{
     sync::Arc,
 };
 
-use quinn::{Endpoint}; 
-
 use anyhow::Error;
+use quinn::Endpoint;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 use tokio::net::UdpSocket;
-use tokio_util::{udp::UdpFramed, codec::BytesCodec};
+use tokio_util::{codec::BytesCodec, udp::UdpFramed};
 use uuid::Uuid;
 
 use crate::verification;
-
 
 #[derive(Clone)]
 pub struct Node {
     pub stream: Arc<UdpFramed<BytesCodec>>,
     pub id: Uuid,
-    pub endpoint:Endpoint
+    pub endpoint: Endpoint,
 }
 impl Node {
     pub async fn new(port: u16) -> Result<Self, Error> {
@@ -31,14 +29,14 @@ impl Node {
         )))?;
         socket_2.set_broadcast(true)?;
         let config = verification::get_server_config().await?;
-        let server_addr = "127.0.0.1:5001".parse::<SocketAddr>()?; 
-        let codec = BytesCodec::new(); 
-        let socket = UdpSocket::from_std(socket_2.into())?; 
+        let server_addr = "127.0.0.1:5001".parse::<SocketAddr>()?;
+        let codec = BytesCodec::new();
+        let socket = UdpSocket::from_std(socket_2.into())?;
 
         Ok(Self {
             stream: Arc::new(UdpFramed::new(socket, codec)),
             id: Uuid::new_v4(),
-            endpoint: Endpoint::server(config, server_addr)?
+            endpoint: Endpoint::server(config, server_addr)?,
         })
     }
     pub async fn send(&self, buffer: &[u8]) -> Result<usize, Error> {
@@ -48,7 +46,7 @@ impl Node {
     pub async fn recv(&self, buffer: &mut [u8]) -> Result<(usize, SocketAddr), Error> {
         Ok(self.socket.recv_from(buffer).await?)
     }
-    // pub async fn connect(&self) { 
+    // pub async fn connect(&self) {
     //     let connection = self.endpoint.connect(server_addr(), SERVER_NAME)?.await?;
     // }
 }

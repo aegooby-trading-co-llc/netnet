@@ -14,8 +14,8 @@ mod verification;
 
 use node::Node;
 
-// struct Peer { 
-//     timestamp: Instant, 
+// struct Peer {
+//     timestamp: Instant,
 //     port: u16
 // }
 
@@ -32,7 +32,7 @@ pub async fn main() -> Result<(), Error> {
         let _ = join!(
             spawn(async move {
                 let mut buf = *b"                                    ";
-                
+
                 let _ = reader.recv(&mut buf).await?;
                 let id = Uuid::parse_str(from_utf8(&buf)?)?;
                 if id != reader.id {
