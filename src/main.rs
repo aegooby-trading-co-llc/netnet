@@ -2,7 +2,9 @@ use std::{collections::HashMap, str::from_utf8, sync::Arc, time::Duration};
 
 use anyhow::{Ok, Result};
 use tokio::{
-    join, main, spawn,
+    join, main, select,
+    signal::ctrl_c,
+    spawn,
     sync::Mutex,
     time::{sleep, sleep_until, Instant},
 };
@@ -27,6 +29,10 @@ use node::Node;
 
 #[main(flavor = "multi_thread")]
 pub async fn main() -> Result<()> {
+    select! {
+        _ = ctrl_c() => {},
+    }
+
     let node = Node::new(8080).await?;
     let peers = Arc::new(Mutex::new(HashMap::<Uuid, Instant>::new()));
     // println!("running on port: {}", node.socket.local_addr()?.port());
