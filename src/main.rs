@@ -9,7 +9,6 @@ use tokio::{
 use uuid::Uuid;
 
 mod node;
-
 mod verification;
 
 use node::Node;
