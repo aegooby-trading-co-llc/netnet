@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::from_utf8, sync::Arc, time::Duration};
 
-use anyhow::Error;
+use anyhow::{Ok, Result};
 use tokio::{
     join, main, spawn,
     sync::Mutex,
@@ -20,7 +20,7 @@ use node::Node;
 // }
 
 #[main(flavor = "multi_thread")]
-pub async fn main() -> Result<(), Error> {
+pub async fn main() -> Result<()> {
     let node = Node::new(8080).await?;
     let peers = Arc::new(Mutex::new(HashMap::<Uuid, Instant>::new()));
     println!("running on port: {}", node.socket.local_addr()?.port());
@@ -50,19 +50,19 @@ pub async fn main() -> Result<(), Error> {
                         }
                     });
                 }
-                Ok::<(), Error>(())
+                Ok::<()>(())
             }),
             spawn(async move {
                 writer
                     .send(format!("{}", writer.id.as_hyphenated()).as_bytes())
                     .await?;
                 sleep(Duration::from_millis(500)).await;
-                Ok::<(), Error>(())
+                Ok::<()>(())
             }),
             spawn(async move {
                 println!("peers: {:#?}", peers_reader.lock().await);
                 sleep(Duration::from_millis(2000)).await;
-                Ok::<(), Error>(())
+                Ok::<()>(())
             })
         );
     }

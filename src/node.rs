@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::Error;
+use anyhow::Result;
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use quinn::Endpoint;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
@@ -20,7 +20,7 @@ pub struct Node {
     pub endpoint: Endpoint,
 }
 impl Node {
-    pub async fn new(port: u16) -> Result<Self, Error> {
+    pub async fn new(port: u16) -> Result<Self> {
         let socket_2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
         socket_2.set_reuse_address(true)?;
         socket_2.set_reuse_port(true)?;
@@ -40,11 +40,11 @@ impl Node {
             endpoint: Endpoint::server(config, server_addr)?,
         })
     }
-    pub async fn send(&self, buffer: &[u8]) -> Result<usize, Error> {
+    pub async fn send(&self, buffer: &[u8]) -> Result<usize> {
         let broadcasthost = format!("255.255.255.255:{}", self.socket.local_addr()?.port());
         Ok(self.socket.send_to(buffer, broadcasthost).await?)
     }
-    pub async fn recv(&self, buffer: &mut [u8]) -> Result<(usize, SocketAddr), Error> {
+    pub async fn recv(&self, buffer: &mut [u8]) -> Result<(usize, SocketAddr)> {
         Ok(self.socket.recv_from(buffer).await?)
     }
     // pub async fn connect(&self) {
