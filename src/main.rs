@@ -8,8 +8,15 @@ use tokio::{
 };
 use uuid::Uuid;
 
+mod codec;
 mod node;
 mod verification;
+
+pub mod snazzy {
+    pub mod items {
+        include!(concat!(env!("OUT_DIR"), "/snazzy.items.rs"));
+    }
+}
 
 use node::Node;
 
@@ -22,7 +29,7 @@ use node::Node;
 pub async fn main() -> Result<()> {
     let node = Node::new(8080).await?;
     let peers = Arc::new(Mutex::new(HashMap::<Uuid, Instant>::new()));
-    println!("running on port: {}", node.socket.local_addr()?.port());
+    // println!("running on port: {}", node.socket.local_addr()?.port());
     loop {
         let peers_reader = peers.clone();
         let peers_writer = peers.clone();

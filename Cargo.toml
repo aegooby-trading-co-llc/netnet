@@ -12,13 +12,18 @@ futures-sink = "0.3.25"
 futures-util = { version = "0.3.25", features = ["sink"] }
 mio = "0.8.5"
 prost = "0.11.2"
+prost-types = "0.11.2"
 quinn = "0.9.1"
 rcgen = "0.10.0"
 rustls = { version = "0.20.7", features = ["dangerous_configuration", "quic"] }
-serde = { version = "1.0.147", features = ["derive"] }
 socket2 = { version = "0.4.7", features = ["all"] }
 tokio = { version = "1.21.2", features = ["full", "socket2", "mio", "tracing"] }
 tokio-tracing = "0.0.0"
 tokio-util = { version = "0.7.4", features = ["full"] }
 tracing-subscriber = { version = "0.3.16", features = ["regex", "tracing", "matchers", "once_cell", "parking_lot"] }
 uuid = { version = "1.2.2", features = ["v4", "fast-rng"] }
+
+[build-dependencies]
+anyhow = "1.0.66"
+glob = "0.3.0"
+prost-build = "0.11.2"

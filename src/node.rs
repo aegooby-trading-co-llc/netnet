@@ -40,12 +40,14 @@ impl Node {
             endpoint: Endpoint::server(config, server_addr)?,
         })
     }
-    pub async fn send(&self, buffer: &[u8]) -> Result<usize> {
-        let broadcasthost = format!("255.255.255.255:{}", self.socket.local_addr()?.port());
-        Ok(self.socket.send_to(buffer, broadcasthost).await?)
+    pub async fn send(&self, buffer: &[u8]) -> Result<()> {
+        // let broadcasthost = format!("255.255.255.255:{}", self.socket.local_addr()?.port());
+        // Ok(self.socket.send_to(buffer, broadcasthost).await?)
+        Ok(())
     }
-    pub async fn recv(&self, buffer: &mut [u8]) -> Result<(usize, SocketAddr)> {
-        Ok(self.socket.recv_from(buffer).await?)
+    pub async fn recv(&self, buffer: &mut [u8]) -> Result<()> {
+        // Ok(self.socket.recv_from(buffer).await?)
+        Ok(())
     }
     // pub async fn connect(&self) {
     //     let connection = self.endpoint.connect(server_addr(), SERVER_NAME)?.await?;

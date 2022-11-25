@@ -1,5 +1,13 @@
 {
+    "editor.formatOnSave": true,
     "[rust]": {
         "editor.rulers": [100]
-    }
+    },
+    "rust-analyzer.cargo.autoreload": true,
+    "rust-analyzer.cargo.buildScripts.enable": true,
+    "rust-analyzer.imports.granularity.enforce": true,
+    "rust-analyzer.imports.granularity.group": "crate",
+    "rust-analyzer.imports.group.enable": true,
+    "rust-analyzer.imports.merge.glob": false,
+    "rust-analyzer.restartServerOnConfigChange": true
 }

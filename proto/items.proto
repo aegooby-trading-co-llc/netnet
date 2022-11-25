@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package snazzy.items;
+
+message Ping {
+    string color = 1;
+}
