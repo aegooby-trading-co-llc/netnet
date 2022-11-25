@@ -29,10 +29,6 @@ use node::Node;
 
 #[main(flavor = "multi_thread")]
 pub async fn main() -> Result<()> {
-    select! {
-        _ = ctrl_c() => {},
-    }
-
     let node = Node::new(8080).await?;
     let peers = Arc::new(Mutex::new(HashMap::<Uuid, Instant>::new()));
     // println!("running on port: {}", node.socket.local_addr()?.port());
