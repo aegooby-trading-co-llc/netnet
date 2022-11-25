@@ -16,6 +16,7 @@ jobs:
 
         steps:
             - uses: actions/checkout@v3
+            - run: sudo apt-get update
             - name: Protobuf compiler
               run: sudo apt-get install protobuf3-compiler
             - name: Build
