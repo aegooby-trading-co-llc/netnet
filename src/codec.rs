@@ -2,12 +2,12 @@ use anyhow::Error;
 use bytes::BytesMut;
 use tokio_util::codec::{Decoder, Encoder};
 
-use crate::proto;
+use crate::proto::ping::Ping;
 
 pub struct Codec;
 
 impl Decoder for Codec {
-    type Item = proto::ping::Ping;
+    type Item = Ping;
     type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
@@ -15,10 +15,10 @@ impl Decoder for Codec {
     }
 }
 
-impl<Item> Encoder<Item> for Codec {
+impl Encoder<Ping> for Codec {
     type Error = Error;
 
-    fn encode(&mut self, item: Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
+    fn encode(&mut self, item: Ping, dst: &mut BytesMut) -> Result<(), Self::Error> {
         todo!()
     }
 }
