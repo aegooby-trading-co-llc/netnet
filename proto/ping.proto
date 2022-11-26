@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ping;
+package proto.ping;
 
 message Ping {
     uint32 port = 1;

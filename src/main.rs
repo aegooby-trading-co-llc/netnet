@@ -2,9 +2,7 @@ use std::{collections::HashMap, str::from_utf8, sync::Arc, time::Duration};
 
 use anyhow::{Ok, Result};
 use tokio::{
-    join, main, select,
-    signal::ctrl_c,
-    spawn,
+    join, main, spawn,
     sync::Mutex,
     time::{sleep, sleep_until, Instant},
 };
@@ -14,9 +12,9 @@ mod codec;
 mod node;
 mod verification;
 
-pub mod snazzy {
-    pub mod items {
-        include!(concat!(env!("OUT_DIR"), "/snazzy.items.rs"));
+pub mod proto {
+    pub mod ping {
+        include!(concat!(env!("OUT_DIR"), "/proto.ping.rs"));
     }
 }
 
