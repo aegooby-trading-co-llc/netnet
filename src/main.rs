@@ -25,52 +25,12 @@ use crate::proto::ping::Ping;
 #[main(flavor = "multi_thread")]
 pub async fn main() -> Result<()> {
     let port = 8080u16;
-    let node = Arc::new(Node::new(port).await?);
-    let peers = Arc::new(Mutex::new(HashMap::<Uuid, Instant>::new()));
+    // let node = Arc::new(Node::new(port).await?);
+    let mut node = Node::new(port).await?;
+    // let peers = Arc::new(Mutex::new(HashMap::<Uuid, Instant>::new()));
     // println!("running on port: {}", node.socket.local_addr()?.port());
-    loop {
-        let peers_reader = peers.clone();
-        let peers_writer = peers.clone();
-        let reader = node.clone();
-        let writer = node.clone();
-        let _ = join!(
-            spawn(async move {
-                let mut buf = *b"                                    ";
-
-                let _ = reader.recv(&mut buf).await?;
-                let id = Uuid::parse_str(from_utf8(&buf)?)?;
-                if id != reader.id {
-                    let timestamp = Instant::now() + Duration::from_secs(10);
-                    {
-                        peers_writer.lock().await.insert(id, timestamp);
-                    }
-                    spawn(async move {
-                        sleep_until(timestamp).await;
-                        let mut peers = peers_writer.lock().await;
-                        if let Some(expiry) = peers.get(&id) {
-                            if *expiry == timestamp {
-                                peers.remove(&id);
-                            }
-                        }
-                    });
-                }
-                Ok::<()>(())
-            }),
-            spawn(async move {
-                writer
-                    .ping(Ping {
-                        port: port.into(),
-                        uuid: writer.id.as_hyphenated().to_string(),
-                    })
-                    .await?;
-                sleep(Duration::from_millis(500)).await;
-                Ok::<()>(())
-            }),
-            spawn(async move {
-                println!("peers: {:#?}", peers_reader.lock().await);
-                sleep(Duration::from_millis(2000)).await;
-                Ok::<()>(())
-            })
-        );
-    }
+    // loop {
+    node.ping_task().await?;
+    // }
+    Ok(())
 }
