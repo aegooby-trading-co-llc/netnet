@@ -1,7 +1,4 @@
-use std::{
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
-    time::Duration,
-};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 use anyhow::{Ok, Result};
 use futures_util::{
@@ -10,7 +7,7 @@ use futures_util::{
 };
 use quinn::Endpoint;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
-use tokio::{join, net::UdpSocket, time::sleep};
+use tokio::{join, net::UdpSocket};
 use tokio_util::udp::UdpFramed;
 use uuid::Uuid;
 
@@ -77,7 +74,4 @@ impl Node {
         (send?, recv?);
         Ok(())
     }
-    // pub async fn connect(&self) {
-    //     let connection = self.endpoint.connect(server_addr(), SERVER_NAME)?.await?;
-    // }
 }

@@ -7,11 +7,11 @@ use rustls::{
     client::{ServerCertVerified, ServerCertVerifier},
     Certificate, Error, PrivateKey, ServerName,
 };
-use tokio::fs::write;
+
 struct SkipServerVerification;
 
 impl SkipServerVerification {
-    fn new() -> Arc<Self> {
+    pub fn new() -> Arc<Self> {
         Arc::new(Self)
     }
 }
@@ -36,8 +36,6 @@ pub async fn get_server_config() -> Result<ServerConfig> {
     let cert = generate_simple_self_signed(names)?;
     let cert_der = cert.serialize_der()?;
     let priv_key = cert.serialize_private_key_der();
-
-    write("tmp.cert", &cert_der).await?;
 
     let certificate = Certificate(cert_der);
     let private_key = PrivateKey(priv_key);
