@@ -6,6 +6,11 @@ use tokio_util::codec::{Decoder, Encoder};
 use crate::proto::ping::Ping;
 
 pub struct Codec;
+impl Codec {
+    pub fn new() -> Self {
+        Self
+    }
+}
 
 impl Decoder for Codec {
     type Item = Ping;

@@ -20,9 +20,12 @@ pub mod proto {
 
 use node::Node;
 
+use crate::proto::ping::Ping;
+
 #[main(flavor = "multi_thread")]
 pub async fn main() -> Result<()> {
-    let node = Node::new(8080).await?;
+    let port = 8080u16;
+    let node = Arc::new(Node::new(port).await?);
     let peers = Arc::new(Mutex::new(HashMap::<Uuid, Instant>::new()));
     // println!("running on port: {}", node.socket.local_addr()?.port());
     loop {
@@ -55,7 +58,10 @@ pub async fn main() -> Result<()> {
             }),
             spawn(async move {
                 writer
-                    .send(format!("{}", writer.id.as_hyphenated()).as_bytes())
+                    .ping(Ping {
+                        port: port.into(),
+                        uuid: writer.id.as_hyphenated().to_string(),
+                    })
                     .await?;
                 sleep(Duration::from_millis(500)).await;
                 Ok::<()>(())
