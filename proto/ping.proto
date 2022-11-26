@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package ping;
+
+message Ping {
+    uint32 port = 1;
+    string uuid = 2;
+}
