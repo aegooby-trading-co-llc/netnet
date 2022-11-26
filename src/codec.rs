@@ -1,6 +1,7 @@
 use anyhow::Error;
 use bytes::BytesMut;
 use prost::Message;
+// use std::io::Cursor;
 use tokio_util::codec::{Decoder, Encoder};
 
 use crate::proto::ping::Ping;
@@ -17,7 +18,7 @@ impl Decoder for Codec {
     type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        todo!()
+        Ok(Some(self::Ping::decode(src)?))
     }
 }
 
