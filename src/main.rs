@@ -29,8 +29,8 @@ pub async fn main() -> Result<()> {
     let mut node = Node::new(port).await?;
     // let peers = Arc::new(Mutex::new(HashMap::<Uuid, Instant>::new()));
     // println!("running on port: {}", node.socket.local_addr()?.port());
-    // loop {
-    node.ping_task().await?;
-    // }
+    loop {
+        node.ping_task().await?;
+    }
     Ok(())
 }
