@@ -1,5 +1,6 @@
 use anyhow::Error;
 use bytes::BytesMut;
+use prost::Message;
 use tokio_util::codec::{Decoder, Encoder};
 
 use crate::proto::ping::Ping;
@@ -19,6 +20,8 @@ impl Encoder<Ping> for Codec {
     type Error = Error;
 
     fn encode(&mut self, item: Ping, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        todo!()
+        dst.reserve(item.encoded_len());
+        item.encode(dst)?;
+        Ok(())
     }
 }

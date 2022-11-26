@@ -20,11 +20,6 @@ pub mod proto {
 
 use node::Node;
 
-// struct Peer {
-//     timestamp: Instant,
-//     port: u16
-// }
-
 #[main(flavor = "multi_thread")]
 pub async fn main() -> Result<()> {
     let node = Node::new(8080).await?;
