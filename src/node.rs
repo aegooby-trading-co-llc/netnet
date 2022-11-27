@@ -71,7 +71,7 @@ impl Node {
     async fn ping_sink(&mut self) -> Result<()> {
         let ping_port = self.ping_port;
         let quic_port = self.quic_port;
-        let uuid = self.id.clone();
+        let uuid = self.id;
 
         let cloned = self.sink.clone();
         let mut sink = cloned.lock_owned().await;
@@ -95,7 +95,7 @@ impl Node {
         Ok(())
     }
     async fn ping_stream(&mut self) -> Result<()> {
-        let uuid = self.id.clone();
+        let uuid = self.id;
 
         let cloned = self.stream.clone();
         let peers = self.peers.clone();

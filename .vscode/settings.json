@@ -9,5 +9,6 @@
     "rust-analyzer.imports.granularity.group": "crate",
     "rust-analyzer.imports.group.enable": true,
     "rust-analyzer.imports.merge.glob": false,
-    "rust-analyzer.restartServerOnConfigChange": true
+    "rust-analyzer.restartServerOnConfigChange": true,
+    "rust-analyzer.checkOnSave.command": "clippy"
 }

@@ -52,9 +52,7 @@ mod test {
         assert!(
             codec
                 .decode(&mut buffer)?
-                .map_or(Err(Error::msg("Prost failed to decode buffer")), |item| Ok(
-                    item
-                ))?
+                .map_or(Err(Error::msg("Prost failed to decode buffer")), Ok)?
                 == ping
         );
         Ok(())

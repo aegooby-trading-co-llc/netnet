@@ -50,5 +50,5 @@ pub async fn get_server_config() -> Result<ServerConfig> {
         vec![Certificate(cert.serialize_der()?)],
         PrivateKey(cert.serialize_private_key_der()),
     )?;
-    return Ok(server_config);
+    Ok(server_config)
 }
