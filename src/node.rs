@@ -34,7 +34,8 @@ pub struct Node {
     pub stream: Arc<Mutex<SplitStream<UdpFramed<Codec>>>>,
     pub id: Uuid,
     pub endpoint: Endpoint,
-    pub port: u16,
+    pub ping_port: u16,
+    pub quic_port: u16,
     pub peers: Arc<Mutex<HashMap<Uuid, Peer>>>,
 }
 impl Node {
@@ -48,24 +49,30 @@ impl Node {
         socket_2.set_broadcast(true)?;
 
         let framed = UdpFramed::new(UdpSocket::from_std(socket_2.into())?, Codec::new());
-        let port = framed.get_ref().local_addr()?.port();
+        let ping_port = framed.get_ref().local_addr()?.port();
         let (sink, stream) = framed.split();
         let mut endpoint = Endpoint::server(
             get_server_config().await?,
             "127.0.0.1:0".parse::<SocketAddr>()?,
         )?;
+        let quic_port = endpoint.local_addr()?.port();
         endpoint.set_default_client_config(configure_client());
 
         Ok(Self {
             stream: Arc::new(Mutex::new(stream)),
             sink: Arc::new(Mutex::new(sink)),
             id: Uuid::new_v4(),
+            ping_port,
+            quic_port,
             endpoint,
-            port,
             peers: Arc::new(Mutex::new(HashMap::<Uuid, Peer>::new())),
         })
     }
-    async fn ping_sink(&mut self, port: u16, uuid: Uuid) -> Result<()> {
+    async fn ping_sink(&mut self) -> Result<()> {
+        let ping_port = self.ping_port;
+        let quic_port = self.quic_port;
+        let uuid = self.id.clone();
+
         let cloned = self.sink.clone();
         let mut sink = cloned.lock_owned().await;
         let peers = self.peers.clone();
@@ -73,10 +80,10 @@ impl Node {
             {
                 debug!("peers: {:#?}", peers.try_lock()?);
             }
-            let broadcasthost = format!("255.255.255.255:{}", port);
+            let broadcasthost = format!("255.255.255.255:{}", ping_port);
             sink.send((
                 Ping {
-                    port: port.into(),
+                    port: quic_port.into(),
                     uuid: uuid.as_hyphenated().to_string(),
                 },
                 broadcasthost.parse()?,
@@ -87,7 +94,9 @@ impl Node {
         });
         Ok(())
     }
-    async fn ping_stream(&mut self, uuid: Uuid) -> Result<()> {
+    async fn ping_stream(&mut self) -> Result<()> {
+        let uuid = self.id.clone();
+
         let cloned = self.stream.clone();
         let peers = self.peers.clone();
         let mut stream = cloned.lock_owned().await;
@@ -120,12 +129,9 @@ impl Node {
         Ok(())
     }
     pub async fn ping_task(&mut self) -> Result<()> {
-        let port = self.port;
-        let uuid = self.id.clone();
-
         loop {
-            self.ping_sink(port, uuid.clone()).await?;
-            self.ping_stream(uuid.clone()).await?;
+            self.ping_sink().await?;
+            self.ping_stream().await?;
         }
     }
 
