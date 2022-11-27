@@ -1,11 +1,11 @@
 use std::{sync::Arc, time::SystemTime};
 
 use anyhow::Result;
-use quinn::ServerConfig;
+use quinn::{ClientConfig, ServerConfig};
 use rcgen::generate_simple_self_signed;
 use rustls::{
     client::{ServerCertVerified, ServerCertVerifier},
-    Certificate, Error, PrivateKey, ServerName,
+    Certificate, ClientConfig as TlsConfig, Error, PrivateKey, ServerName,
 };
 
 struct SkipServerVerification;
@@ -30,18 +30,25 @@ impl ServerCertVerifier for SkipServerVerification {
     }
 }
 
+pub fn configure_client() -> ClientConfig {
+    let crypto = TlsConfig::builder()
+        .with_safe_defaults()
+        .with_custom_certificate_verifier(SkipServerVerification::new())
+        .with_no_client_auth();
+
+    ClientConfig::new(Arc::new(crypto))
+}
+
 pub async fn get_server_config() -> Result<ServerConfig> {
-    let names = vec!["0.0.0.0".into()];
+    let cert = generate_simple_self_signed(vec![
+        "0.0.0.0".into(),
+        "localhost".into(),
+        "127.0.0.1".into(),
+    ])?;
 
-    let cert = generate_simple_self_signed(names)?;
-    let cert_der = cert.serialize_der()?;
-    let priv_key = cert.serialize_private_key_der();
-
-    let certificate = Certificate(cert_der);
-    let private_key = PrivateKey(priv_key);
-
-    let cert_chain = vec![certificate];
-
-    let server_config = ServerConfig::with_single_cert(cert_chain, private_key)?;
+    let server_config = ServerConfig::with_single_cert(
+        vec![Certificate(cert.serialize_der()?)],
+        PrivateKey(cert.serialize_private_key_der()),
+    )?;
     return Ok(server_config);
 }

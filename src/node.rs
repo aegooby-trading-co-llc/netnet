@@ -5,7 +5,6 @@ use std::{
     time::Duration,
 };
 
-use crate::{codec::Codec, proto::ping::Ping, verification::get_server_config};
 use anyhow::{Ok, Result};
 use futures_util::{
     sink::SinkExt,
@@ -21,6 +20,12 @@ use tokio::{
 };
 use tokio_util::udp::UdpFramed;
 use uuid::Uuid;
+
+use crate::{
+    codec::Codec,
+    proto::ping::Ping,
+    verification::{configure_client, get_server_config},
+};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Peer {
@@ -50,15 +55,17 @@ impl Node {
         let framed = UdpFramed::new(UdpSocket::from_std(socket_2.into())?, Codec::new());
         let port = framed.get_ref().local_addr()?.port();
         let (sink, stream) = framed.split();
+        let mut endpoint = Endpoint::server(
+            get_server_config().await?,
+            "127.0.0.1:0".parse::<SocketAddr>()?,
+        )?;
+        endpoint.set_default_client_config(configure_client());
 
         Ok(Self {
             stream: Arc::new(Mutex::new(stream)),
             sink: Arc::new(Mutex::new(sink)),
             id: Uuid::new_v4(),
-            endpoint: Endpoint::server(
-                get_server_config().await?,
-                "127.0.0.1:0".parse::<SocketAddr>()?,
-            )?,
+            endpoint,
             port,
             peers: Arc::new(Mutex::new(HashMap::<Uuid, Peer>::new())),
         })
