@@ -65,64 +65,67 @@ impl Node {
             peers: Arc::new(Mutex::new(HashMap::<Uuid, Peer>::new())),
         })
     }
+    async fn ping_sink(&mut self, port: u16, uuid: Uuid) -> Result<()> {
+        let cloned = self.sink.clone();
+        let mut sink = cloned.lock_owned().await;
+        let peers = self.peers.clone();
+        spawn(async move {
+            {
+                debug!("peers: {:#?}", peers.try_lock()?);
+            }
+            let broadcasthost = format!("255.255.255.255:{}", port);
+            sink.send((
+                Ping {
+                    port: port.into(),
+                    uuid: uuid.as_hyphenated().to_string(),
+                },
+                broadcasthost.parse()?,
+            ))
+            .await?;
+            sleep(Duration::from_millis(1500)).await;
+            Ok(())
+        });
+        Ok(())
+    }
+    async fn ping_stream(&mut self, uuid: Uuid) -> Result<()> {
+        let cloned = self.stream.clone();
+        let peers = self.peers.clone();
+        let mut stream = cloned.lock_owned().await;
+        spawn(async move {
+            if let Some(result) = stream.next().await {
+                let (ping, _addr) = result?;
+                if ping.uuid != uuid.as_hyphenated().to_string() {
+                    debug!("{:#?}", ping);
+                    let id = Uuid::parse_str(ping.uuid.as_str())?;
+                    let peer = Peer {
+                        port: ping.port,
+                        timeout: Instant::now() + Duration::from_secs(10),
+                    };
+                    {
+                        peers.lock().await.insert(id, peer);
+                    }
+                    spawn(async move {
+                        sleep_until(peer.timeout).await;
+                        let mut peers = peers.lock().await;
+                        if let Some(expiry) = peers.get(&id) {
+                            if expiry.timeout == peer.timeout {
+                                peers.remove(&id);
+                            }
+                        }
+                    });
+                }
+            }
+            Ok(())
+        });
+        Ok(())
+    }
     pub async fn ping_task(&mut self) -> Result<()> {
         let port = self.port;
         let uuid = self.id.clone();
 
         loop {
-            {
-                let cloned = self.sink.clone();
-                let mut sink = cloned.lock_owned().await;
-                let peers = self.peers.clone();
-                spawn(async move {
-                    {
-                        debug!("peers: {:#?}", peers.try_lock()?);
-                    }
-                    let broadcasthost = format!("255.255.255.255:{}", port);
-                    sink.send((
-                        Ping {
-                            port: port.into(),
-                            uuid: uuid.as_hyphenated().to_string(),
-                        },
-                        broadcasthost.parse()?,
-                    ))
-                    .await?;
-                    sleep(Duration::from_millis(1500)).await;
-                    Ok(())
-                });
-            }
-
-            {
-                let cloned = self.stream.clone();
-                let peers = self.peers.clone();
-                let mut stream = cloned.lock_owned().await;
-                spawn(async move {
-                    if let Some(result) = stream.next().await {
-                        let (ping, _addr) = result?;
-                        if ping.uuid != uuid.as_hyphenated().to_string() {
-                            debug!("{:#?}", ping);
-                            let id = Uuid::parse_str(ping.uuid.as_str())?;
-                            let peer = Peer {
-                                port: ping.port,
-                                timeout: Instant::now() + Duration::from_secs(10),
-                            };
-                            {
-                                peers.lock().await.insert(id, peer);
-                            }
-                            spawn(async move {
-                                sleep_until(peer.timeout).await;
-                                let mut peers = peers.lock().await;
-                                if let Some(expiry) = peers.get(&id) {
-                                    if expiry.timeout == peer.timeout {
-                                        peers.remove(&id);
-                                    }
-                                }
-                            });
-                        }
-                    }
-                    Ok(())
-                });
-            }
+            self.ping_sink(port, uuid.clone()).await?;
+            self.ping_stream(uuid.clone()).await?;
         }
     }
 
