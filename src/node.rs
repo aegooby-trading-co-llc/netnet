@@ -1,9 +1,11 @@
 use std::{
+    collections::HashMap,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     sync::Arc,
     time::Duration,
 };
 
+use crate::{codec::Codec, proto::ping::Ping, verification::get_server_config};
 use anyhow::{Ok, Result};
 use futures_util::{
     sink::SinkExt,
@@ -11,11 +13,20 @@ use futures_util::{
 };
 use quinn::Endpoint;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
-use tokio::{net::UdpSocket, spawn, sync::Mutex, time::sleep};
+use tokio::{
+    net::UdpSocket,
+    spawn,
+    sync::Mutex,
+    time::{sleep, sleep_until, Instant},
+};
 use tokio_util::udp::UdpFramed;
 use uuid::Uuid;
 
-use crate::{codec::Codec, proto::ping::Ping, verification::get_server_config};
+#[derive(Copy, Clone, Debug)]
+pub struct Peer {
+    pub port: u32,
+    pub timeout: Instant,
+}
 
 pub struct Node {
     pub sink: Arc<Mutex<SplitSink<UdpFramed<Codec>, (Ping, SocketAddr)>>>,
@@ -23,6 +34,7 @@ pub struct Node {
     pub id: Uuid,
     pub endpoint: Endpoint,
     pub port: u16,
+    pub peers: Arc<Mutex<HashMap<Uuid, Peer>>>,
 }
 impl Node {
     pub async fn new(port: u16) -> Result<Self> {
@@ -38,6 +50,7 @@ impl Node {
         let framed = UdpFramed::new(UdpSocket::from_std(socket_2.into())?, Codec::new());
         let port = framed.get_ref().local_addr()?.port();
         let (sink, stream) = framed.split();
+
         Ok(Self {
             stream: Arc::new(Mutex::new(stream)),
             sink: Arc::new(Mutex::new(sink)),
@@ -47,6 +60,7 @@ impl Node {
                 "127.0.0.1:0".parse::<SocketAddr>()?,
             )?,
             port,
+            peers: Arc::new(Mutex::new(HashMap::<Uuid, Peer>::new())),
         })
     }
     pub async fn ping_task(&mut self) -> Result<()> {
@@ -57,7 +71,9 @@ impl Node {
             {
                 let cloned = self.sink.clone();
                 let mut sink = cloned.lock_owned().await;
+                let peers = self.peers.clone();
                 spawn(async move {
+                    println!("peers: {:#?}", peers.lock().await);
                     let broadcasthost = format!("255.255.255.255:{}", port);
                     sink.send((
                         Ping {
@@ -74,12 +90,30 @@ impl Node {
 
             {
                 let cloned = self.stream.clone();
+                let peers = self.peers.clone();
                 let mut stream = cloned.lock_owned().await;
                 spawn(async move {
                     if let Some(result) = stream.next().await {
                         let (ping, _addr) = result?;
                         if ping.uuid != uuid.as_hyphenated().to_string() {
                             println!("{:#?}", ping);
+                            let id = Uuid::parse_str(ping.uuid.as_str())?;
+                            let peer = Peer {
+                                port: ping.port,
+                                timeout: Instant::now() + Duration::from_secs(10),
+                            };
+                            {
+                                peers.lock().await.insert(id, peer);
+                            }
+                            spawn(async move {
+                                sleep_until(peer.timeout).await;
+                                let mut peers = peers.lock().await;
+                                if let Some(expiry) = peers.get(&id) {
+                                    if expiry.timeout == peer.timeout {
+                                        peers.remove(&id);
+                                    }
+                                }
+                            });
                         }
                     }
                     Ok(())
@@ -87,4 +121,6 @@ impl Node {
             }
         }
     }
+
+    // pub async fn quic_connect()
 }
