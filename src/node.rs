@@ -14,6 +14,7 @@ use tokio::{
     time::{sleep, sleep_until, Instant},
 };
 use tokio_util::udp::UdpFramed;
+use tracing::debug;
 use uuid::Uuid;
 
 use crate::{
@@ -74,7 +75,9 @@ impl Node {
                 let mut sink = cloned.lock_owned().await;
                 let peers = self.peers.clone();
                 spawn(async move {
-                    println!("peers: {:#?}", peers.lock().await);
+                    {
+                        debug!("peers: {:#?}", peers.try_lock()?);
+                    }
                     let broadcasthost = format!("255.255.255.255:{}", port);
                     sink.send((
                         Ping {
@@ -97,7 +100,7 @@ impl Node {
                     if let Some(result) = stream.next().await {
                         let (ping, _addr) = result?;
                         if ping.uuid != uuid.as_hyphenated().to_string() {
-                            println!("{:#?}", ping);
+                            debug!("{:#?}", ping);
                             let id = Uuid::parse_str(ping.uuid.as_str())?;
                             let peer = Peer {
                                 port: ping.port,
