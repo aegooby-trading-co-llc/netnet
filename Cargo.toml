@@ -30,5 +30,5 @@ anyhow = "1.0.66"
 glob = "0.3.0"
 prost-build = "0.11.2"
 
-[target."cfg(test)".dependencies]
+[target."cfg(loom)".dependencies]
 loom = "0.5.6"

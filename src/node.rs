@@ -1,9 +1,4 @@
-use std::{
-    collections::HashMap,
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 
 use anyhow::{Ok, Result};
 use futures_util::{
@@ -46,10 +41,9 @@ impl Node {
         let socket_2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
         socket_2.set_reuse_address(true)?;
         socket_2.set_reuse_port(true)?;
-        socket_2.bind(&SockAddr::from(SocketAddrV4::new(
-            Ipv4Addr::new(0, 0, 0, 0),
-            port,
-        )))?;
+        socket_2.bind(&SockAddr::from(
+            format!("0.0.0.0:{}", port).parse::<SocketAddr>()?,
+        ))?;
         socket_2.set_broadcast(true)?;
 
         let framed = UdpFramed::new(UdpSocket::from_std(socket_2.into())?, Codec::new());

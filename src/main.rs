@@ -1,4 +1,7 @@
-use std::env::{set_var, var};
+use std::{
+    env::{set_var, var},
+    net::SocketAddr,
+};
 
 use anyhow::Result;
 use clap::Parser;
@@ -36,7 +39,7 @@ pub async fn main() -> Result<()> {
     let args = Args::parse();
     match args.trace {
         Some(port) => Builder::default()
-            .server_addr(([127, 0, 0, 1], port))
+            .server_addr(format!("127.0.0.1:{}", port).parse::<SocketAddr>()?)
             .init(),
         None => init(),
     }
