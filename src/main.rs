@@ -1,8 +1,10 @@
 use std::env::{set_var, var};
 
 use anyhow::Result;
-use console_subscriber::init;
+use clap::Parser;
+use console_subscriber::Builder;
 use tokio::main;
+use tracing_subscriber::fmt::init;
 
 mod codec;
 mod node;
@@ -14,7 +16,13 @@ mod proto {
     }
 }
 
-use node::Node;
+use crate::node::Node;
+
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(long)]
+    trace: Option<u16>,
+}
 
 #[main(flavor = "multi_thread")]
 pub async fn main() -> Result<()> {
@@ -25,7 +33,13 @@ pub async fn main() -> Result<()> {
             set_var("RUST_LOG", "error");
         }
     }
-    init();
+    let args = Args::parse();
+    match args.trace {
+        Some(port) => Builder::default()
+            .server_addr(([127, 0, 0, 1], port))
+            .init(),
+        None => init(),
+    }
 
     let mut node = Node::new(8080u16).await?;
     node.ping_task().await?;

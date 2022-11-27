@@ -13,7 +13,6 @@ use quinn::Endpoint;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 use tokio::{net::UdpSocket, spawn, sync::Mutex, time::sleep};
 use tokio_util::udp::UdpFramed;
-use tracing::debug;
 use uuid::Uuid;
 
 use crate::{codec::Codec, proto::ping::Ping, verification::get_server_config};
@@ -77,9 +76,8 @@ impl Node {
                 let cloned = self.stream.clone();
                 let mut stream = cloned.lock_owned().await;
                 spawn(async move {
-                    debug!("read");
                     if let Some(result) = stream.next().await {
-                        let (ping, _) = result?;
+                        let (ping, _addr) = result?;
                         if ping.uuid != uuid.as_hyphenated().to_string() {
                             println!("{:#?}", ping);
                         }
@@ -87,8 +85,6 @@ impl Node {
                     Ok(())
                 });
             }
-            // (send?, recv?);
         }
-        // Ok(())
     }
 }
