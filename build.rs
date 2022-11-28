@@ -14,7 +14,7 @@ fn main() -> Result<()> {
     }
 
     let files = glob("proto/**/*.proto")?
-        .filter_map(|result| result.map_or(None, |path| Some(path)))
+        .filter_map(|result| result.ok())
         .collect::<Vec<PathBuf>>();
     compile_protos(&files, &["proto/"])?;
     Ok(())

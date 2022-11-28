@@ -10,6 +10,7 @@ use tokio::main;
 use tracing_subscriber::fmt::init;
 
 mod codec;
+mod frame;
 mod node;
 mod verification;
 
