@@ -152,6 +152,27 @@ impl Node {
 
         let _ = join!(
             spawn(async move {
+                // {
+                //     debug!("peers: {:#?}", peers.try_lock()?);
+                // }
+                let mut i = interval(Duration::from_millis(1000));
+                loop {
+                    i.tick().await;
+                    let broadcasthost = format!("255.255.255.255:{}", ping_port);
+                    sink.send((
+                        Ping {
+                            port: quic_port.into(),
+                            uuid: uuid.as_hyphenated().to_string(),
+                        },
+                        broadcasthost.parse()?,
+                    ))
+                    .await?;
+                    if false {
+                        break Ok(());
+                    }
+                }
+            }),
+            spawn(async move {
                 while let Some(result) = stream.next().await {
                     let (ping, _addr) = result?;
                     if ping.uuid != uuid.as_hyphenated().to_string() {
@@ -176,27 +197,6 @@ impl Node {
                     }
                 }
                 Ok(())
-            }),
-            spawn(async move {
-                // {
-                //     debug!("peers: {:#?}", peers.try_lock()?);
-                // }
-                // let mut i = interval(Duration::from_millis(10));
-                loop {
-                    // i.tick().await;
-                    let broadcasthost = format!("255.255.255.255:{}", ping_port);
-                    sink.send((
-                        Ping {
-                            port: quic_port.into(),
-                            uuid: uuid.as_hyphenated().to_string(),
-                        },
-                        broadcasthost.parse()?,
-                    ))
-                    .await?;
-                    if false {
-                        break Ok(());
-                    }
-                }
             })
         );
         Ok(())
