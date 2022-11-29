@@ -44,7 +44,7 @@ pub async fn main() -> Result<()> {
         None => init(),
     }
 
-    let mut node = Node::new(8080u16).await?;
+    let node = Node::new(8080u16).await?;
     node.ping_task().await?;
     Ok(())
 }
