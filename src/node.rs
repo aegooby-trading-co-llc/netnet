@@ -1,6 +1,7 @@
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 
 use anyhow::{Ok, Result};
+use futures_core::Future;
 use futures_util::{
     sink::SinkExt,
     stream::{SplitSink, SplitStream, StreamExt},
@@ -19,6 +20,7 @@ use tracing::debug;
 use uuid::Uuid;
 
 use crate::{
+    actor::{Actor, Handler, Message},
     codec::Codec,
     proto::ping::Ping,
     verification::{configure_client, get_server_config},
@@ -32,6 +34,118 @@ pub struct Peer {
 
 type Sink = SplitSink<UdpFramed<Codec>, (Ping, SocketAddr)>;
 type Stream = SplitStream<UdpFramed<Codec>>;
+
+pub struct PingSink {
+    sink: Sink,
+    uuid: Uuid,
+    port: u16,
+    quic_port: u16,
+}
+impl PingSink {
+    pub fn new(sink: Sink, uuid: Uuid, port: u16, quic_port: u16) -> Result<Self> {
+        Ok(Self {
+            sink,
+            uuid,
+            port,
+            quic_port,
+        })
+    }
+}
+impl Actor for PingSink {
+    type Output = ();
+    type Future = impl Future<Output = Result<Self::Output>>;
+
+    fn task(mut self) -> Self::Future {
+        async move {
+            loop {
+                let message = Ping {
+                    port: self.quic_port.into(),
+                    uuid: self.uuid.as_hyphenated().to_string(),
+                };
+                self.handle(message).await?;
+                if false {
+                    break Ok(());
+                }
+            }
+        }
+    }
+}
+impl Message for Ping {}
+impl Handler<Ping> for PingSink {
+    type Reply = ();
+    type Future<'lt> = impl Future<Output = Result<&'lt Self::Reply>>;
+
+    fn handle(&mut self, message: Ping) -> Self::Future<'_> {
+        async move {
+            let broadcasthost = format!("255.255.255.255:{}", self.port);
+            self.sink.send((message, broadcasthost.parse()?)).await?;
+            Ok(&())
+        }
+    }
+}
+
+pub struct PingStream {
+    stream: Stream,
+    uuid: Uuid,
+    port: u16,
+    quic_port: u16,
+}
+impl PingStream {
+    pub fn new(stream: Stream, uuid: Uuid, port: u16, quic_port: u16) -> Result<Self> {
+        Ok(Self {
+            stream,
+            uuid,
+            port,
+            quic_port,
+        })
+    }
+}
+impl Message for (Ping, SocketAddr) {}
+impl Actor for PingStream {
+    type Output = ();
+    type Future = impl Future<Output = Result<Self::Output>>;
+
+    fn task(mut self) -> Self::Future {
+        async move {
+            while let Some(message) = self.stream.next().await {
+                self.handle(message?).await?;
+            }
+            Ok(())
+        }
+    }
+}
+impl Handler<(Ping, SocketAddr)> for PingStream {
+    type Reply = ();
+    type Future<'lt> = impl Future<Output = Result<&'lt Self::Reply>>;
+
+    fn handle(&mut self, message: (Ping, SocketAddr)) -> Self::Future<'_> {
+        async move {
+            let (ping, _addr) = message;
+            if ping.uuid != self.uuid.as_hyphenated().to_string() {
+                debug!("{:#?}", ping);
+                let id = Uuid::parse_str(ping.uuid.as_str())?;
+                let peer = Peer {
+                    port: ping.port,
+                    timeout: Instant::now() + Duration::from_secs(10),
+                };
+                // {
+                //     peers_stream.lock().await.insert(id, peer);
+                // }
+                // let peers_timeout = self.peers.clone();
+                // spawn(async move {
+                //     sleep_until(peer.timeout).await;
+                //     let mut peers = peers_timeout.lock().await;
+                //     if let Some(expiry) = peers.get(&id) {
+                //         if expiry.timeout == peer.timeout {
+                //             peers.remove(&id);
+                //         }
+                //     }
+                // });
+            }
+            Ok(&())
+        }
+    }
+}
 
 pub struct Node {
     pub sink: Sink,

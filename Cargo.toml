@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version = "1.0.66", features = ["backtrace"] }
+async-trait = "0.1.59"
 bytes = "1.2.1"
 clap = { version = "4.0.27", features = ["derive"] }
 console-subscriber = "0.1.8"

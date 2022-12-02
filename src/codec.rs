@@ -36,11 +36,12 @@ impl Encoder<Ping> for Codec {
 mod test {
     use anyhow::{Error, Result};
     use bytes::BytesMut;
+    use tokio::test;
     use tokio_util::codec::{Decoder, Encoder};
 
     use super::{Codec, Ping};
 
-    #[tokio::test]
+    #[test]
     async fn codec() -> Result<()> {
         let mut codec = Codec::new();
         let mut buffer = BytesMut::new();

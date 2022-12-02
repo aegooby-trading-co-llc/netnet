@@ -1,3 +1,5 @@
+#![feature(type_alias_impl_trait)]
+
 use std::{
     env::{set_var, var},
     net::SocketAddr,
@@ -9,6 +11,7 @@ use console_subscriber::Builder;
 use tokio::main;
 use tracing_subscriber::fmt::init;
 
+mod actor;
 mod codec;
 mod node;
 mod verification;
