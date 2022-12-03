@@ -1,3 +1,5 @@
+#![feature(associated_type_defaults)]
+#![feature(tuple_trait)]
 #![feature(type_alias_impl_trait)]
 
 use std::{
@@ -12,9 +14,13 @@ use tokio::main;
 use tracing_subscriber::fmt::init;
 
 mod actor;
+mod cert;
 mod codec;
 mod node;
-mod verification;
+mod peers;
+mod ping;
+mod quic;
+mod util;
 
 mod proto {
     pub mod ping {
