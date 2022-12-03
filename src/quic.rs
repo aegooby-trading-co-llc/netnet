@@ -14,13 +14,13 @@ impl Quic {
     }
 }
 impl Actor for Quic {
-    type Future = impl Future<Output = Result<Self::Output>>;
+    type Future<'lt> = impl Future<Output = Result<&'lt Self::Output>>;
     type Senders = ();
 
     fn senders(&self) -> Self::Senders {
         ()
     }
-    fn task(self) -> Self::Future {
+    fn task(&mut self) -> Self::Future<'_> {
         async move {
             loop {
                 if let Some(conn) = self.endpoint.accept().await {
@@ -31,7 +31,7 @@ impl Actor for Quic {
                     Some(accept) = self.endpoint.accept() => {
                         let conn = accept.await?;
                     }
-                    else => break Ok(())
+                    else => break Ok(&())
                 }
             }
         }

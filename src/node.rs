@@ -35,7 +35,6 @@ pub struct Node {
     ping_stream: PingStream,
     peers: PeerTable,
     quic: Quic,
-    id: Uuid,
 }
 impl Node {
     pub async fn new(port: u16) -> Result<Self> {
@@ -55,7 +54,6 @@ impl Node {
             ping_stream: PingStream::new(stream, id, peers.senders().clone())?,
             peers,
             quic: Quic::new(endpoint)?,
-            id,
         })
     }
 
@@ -66,7 +64,7 @@ impl Node {
             self.peers.spawn(),
             self.quic.spawn(),
         )?;
-        question!(sink, stream, peers);
+        question!(sink, stream, peers, quic);
         Ok(())
     }
 }

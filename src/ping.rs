@@ -41,12 +41,12 @@ impl PingSink {
     }
 }
 impl Actor for PingSink {
-    type Future = impl Future<Output = Result<Self::Output>>;
+    type Future<'lt> = impl Future<Output = Result<&'lt Self::Output>>;
 
     fn senders(&self) -> Self::Senders {
         ()
     }
-    fn task(mut self) -> Self::Future {
+    fn task(&mut self) -> Self::Future<'_> {
         async move {
             let mut i = interval(Duration::from_millis(1000));
             loop {
@@ -57,7 +57,7 @@ impl Actor for PingSink {
                 };
                 self.handle(message).await?;
                 if false {
-                    break Ok(());
+                    break Ok(&());
                 }
             }
         }
@@ -90,17 +90,17 @@ impl PingStream {
     }
 }
 impl Actor for PingStream {
-    type Future = impl Future<Output = Result<Self::Output>>;
+    type Future<'lt> = impl Future<Output = Result<&'lt Self::Output>>;
 
     fn senders(&self) -> Self::Senders {
         ()
     }
-    fn task(mut self) -> Self::Future {
+    fn task(&mut self) -> Self::Future<'_> {
         async move {
             while let Some(message) = self.stream.next().await {
                 self.handle(message?).await?;
             }
-            Ok(())
+            Ok(&())
         }
     }
 }

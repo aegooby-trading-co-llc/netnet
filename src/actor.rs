@@ -5,27 +5,27 @@ use futures_core::Future;
 use tokio::{spawn, task::JoinHandle};
 
 pub trait Actor {
-    type Output: Send + Sync + 'static = ();
-    type Future: Future<Output = Result<Self::Output>> + Send + 'static
+    type Output: Send + Sync = ();
+    type Future<'lt>: Future<Output = Result<&'lt Self::Output>> + Send
     where
-        Self: 'static,
-        Self::Output: 'static;
+        Self: 'lt,
+        Self::Output: 'lt;
     type Senders: Clone + Debug = ();
     fn senders(&self) -> Self::Senders;
-    fn task(self) -> Self::Future;
-    fn shutdown(&self)
+    fn task(&mut self) -> Self::Future<'_>;
+    fn shutdown(&mut self)
     where
-        Self: Sized + 'static,
+        Self: Sized,
     {
     }
-    fn spawn(self) -> JoinHandle<Result<Self::Output>>
+    fn spawn(mut self) -> JoinHandle<Result<()>>
     where
         Self: Sized + Send + Sync + 'static,
     {
         let handle = spawn(async move {
-            let future = self.task().await;
-            // self.shutdown();
-            future
+            self.task().await?;
+            self.shutdown();
+            Ok(())
         });
         handle
     }

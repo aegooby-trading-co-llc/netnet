@@ -35,17 +35,17 @@ impl PeerTable {
 }
 impl Actor for PeerTable {
     type Senders = mpsc::Sender<(Uuid, Peer)>;
-    type Future = impl Future<Output = Result<Self::Output>>;
+    type Future<'lt> = impl Future<Output = Result<&'lt Self::Output>>;
 
     fn senders(&self) -> Self::Senders {
         self.send.clone()
     }
-    fn task(mut self) -> Self::Future {
+    fn task(&mut self) -> Self::Future<'_> {
         async move {
             while let Some(message) = self.recv.recv().await {
                 self.handle(message).await?;
             }
-            Ok(())
+            Ok(&())
         }
     }
 }
