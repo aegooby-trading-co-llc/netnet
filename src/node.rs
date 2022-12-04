@@ -4,7 +4,7 @@ use anyhow::Result;
 use futures_util::stream::StreamExt;
 use quinn::Endpoint;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
-use tokio::{net::UdpSocket, try_join};
+use tokio::{net::UdpSocket, task::JoinHandle, try_join};
 use tokio_util::udp::UdpFramed;
 use uuid::Uuid;
 
@@ -15,8 +15,11 @@ use crate::{
     peers::PeerTable,
     ping::{PingSink, PingStream},
     quic::Quic,
-    util::yank,
 };
+
+pub async fn yank<Output>(handle: JoinHandle<Result<Output>>) -> Result<Output> {
+    Ok(handle.await??)
+}
 
 fn socket_2(port: u16) -> Result<Socket> {
     let socket_2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;

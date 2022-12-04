@@ -18,7 +18,6 @@ mod node;
 mod peers;
 mod ping;
 mod quic;
-mod util;
 
 use crate::node::Node;
 

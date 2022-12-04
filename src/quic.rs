@@ -72,8 +72,8 @@ impl Handler<QuicTarget> for Quic {
 
     fn handle(&mut self, message: QuicTarget) -> Self::Future<'_> {
         async move {
-            let conn = self.endpoint.connect(message.addr, "localhost")?.await?;
-            conn.accept_bi().await?;
+            // let conn = self.endpoint.connect(message.addr, "localhost")?.await?;
+            // conn.accept_bi().await?;
             Ok(&())
         }
     }
