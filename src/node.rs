@@ -24,7 +24,7 @@ fn socket_2(port: u16) -> Result<Socket> {
     socket_2.set_reuse_address(true)?;
     socket_2.set_reuse_port(true)?;
     socket_2.bind(&SockAddr::from(
-        format!("0.0.0.0:-1{port}").parse::<SocketAddr>()?,
+        format!("0.0.0.0:{port}").parse::<SocketAddr>()?,
     ))?;
     socket_2.set_broadcast(true)?;
     socket_2.set_nonblocking(true)?;
