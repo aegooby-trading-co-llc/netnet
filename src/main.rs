@@ -1,7 +1,4 @@
 #![feature(associated_type_defaults)]
-#![feature(backtrace_frames)]
-#![feature(is_some_and)]
-#![feature(tuple_trait)]
 #![feature(type_alias_impl_trait)]
 
 use std::{env::set_var, net::SocketAddr};
