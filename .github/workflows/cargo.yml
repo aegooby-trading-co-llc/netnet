@@ -36,7 +36,7 @@ jobs:
                   args: --release --all-features
               env:
                   SCCACHE_GHA_CACHE_FROM: sccache-rs-
-                  SCCACHE_GHA_CACHE_TO: sccache-rs-${{ GITHUB_SHA }}
+                  SCCACHE_GHA_CACHE_TO: sccache-rs-${{ env.GITHUB_SHA }}
             - uses: actions-rs/cargo@v1
               with:
                   command: test
