@@ -102,7 +102,7 @@ impl Handler<(Uuid, Peer)> for PeerTable {
                 sleep_until(new_peer.timeout).await;
                 let dying_peer = Peer {
                     death: Some(new_peer.timeout),
-                    ..new_peer.clone()
+                    ..new_peer
                 };
                 send.send((id, dying_peer)).await?;
                 Ok::<(), Error>(())

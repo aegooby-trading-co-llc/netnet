@@ -18,7 +18,7 @@ use crate::{
 };
 
 pub async fn yank<Output>(handle: JoinHandle<Result<Output>>) -> Result<Output> {
-    Ok(handle.await??)
+    handle.await?
 }
 
 fn socket_2(port: u16) -> Result<Socket> {
@@ -54,7 +54,7 @@ impl Node {
         let quic = Quic::new(endpoint)?;
         let peers = PeerTable::new(quic.senders())?;
         let ping_sink = PingSink::new(sink, id, port, quic_port)?;
-        let ping_stream = PingStream::new(stream, id, peers.senders().clone())?;
+        let ping_stream = PingStream::new(stream, id, peers.senders())?;
 
         Ok(Self {
             ping_sink,
