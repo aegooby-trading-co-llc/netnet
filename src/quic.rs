@@ -70,7 +70,7 @@ impl Handler<Connecting> for Quic {
 impl Handler<QuicTarget> for Quic {
     type Future<'lt> = impl Future<Output = Result<&'lt Self::Reply>>;
 
-    fn handle(&mut self, message: QuicTarget) -> Self::Future<'_> {
+    fn handle(&mut self, _message: QuicTarget) -> Self::Future<'_> {
         async move {
             // let conn = self.endpoint.connect(message.addr, "localhost")?.await?;
             // conn.accept_bi().await?;

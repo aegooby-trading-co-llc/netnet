@@ -24,10 +24,19 @@ jobs:
               with:
                   toolchain: nightly
                   override: true
+            - name: Configure sccache
+              uses: actions/github-script@v6
+              with:
+                  script: |
+                      core.exportVariable("ACTIONS_CACHE_URL", process.env.ACTIONS_CACHE_URL || "");
+                      core.exportVariable("ACTIONS_RUNTIME_TOKEN", process.env.ACTIONS_RUNTIME_TOKEN || "''");
             - uses: actions-rs/cargo@v1
               with:
                   command: build
                   args: --release --all-features
+              env:
+                  SCCACHE_GHA_CACHE_FROM: sccache-rs-
+                  SCCACHE_GHA_CACHE_TO: sccache-rs-${{ GITHUB_SHA }}
             - uses: actions-rs/cargo@v1
               with:
                   command: test
