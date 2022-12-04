@@ -62,10 +62,10 @@ impl Node {
     #[framed]
     pub async fn ping_task(self) -> Result<()> {
         try_join!(
-            yank_handle(self.ping_sink.spawn()),
-            yank_handle(self.ping_stream.spawn()),
-            yank_handle(self.peers.spawn()),
-            yank_handle(self.quic.spawn()),
+            yank_handle(self.ping_sink.spawn("ping-sink")?),
+            yank_handle(self.ping_stream.spawn("ping-stream")?),
+            yank_handle(self.peers.spawn("peers")?),
+            yank_handle(self.quic.spawn("quic")?),
         )?;
         // question!(sink, stream, peers, quic);
         Ok(())

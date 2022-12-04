@@ -1,5 +1,6 @@
 #![feature(associated_type_defaults)]
 #![feature(backtrace_frames)]
+#![feature(is_some_and)]
 #![feature(tuple_trait)]
 #![feature(type_alias_impl_trait)]
 
@@ -63,9 +64,9 @@ async fn __main(args: &Args) -> Result<()> {
 pub async fn main() {
     let args = Args::parse();
     if let Err(error) = __main(&args).await {
-        println!("{} {}", "error:".bold().red(), error);
+        eprintln!("{} {}", "error:".bold().red(), error);
         if args.bt {
-            println!("{}", error.backtrace());
+            eprintln!("{}", error.backtrace());
         }
     }
 }

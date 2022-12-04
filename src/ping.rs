@@ -11,7 +11,6 @@ use tokio::{
     time::{interval, Instant},
 };
 use tokio_util::udp::UdpFramed;
-use tracing::debug;
 use uuid::Uuid;
 
 use crate::{
@@ -111,11 +110,11 @@ impl Handler<(Ping, SocketAddr)> for PingStream {
         async move {
             let (ping, _addr) = message;
             if ping.uuid != self.uuid.as_hyphenated().to_string() {
-                debug!("{:#?}", ping);
                 let id = Uuid::parse_str(ping.uuid.as_str())?;
                 let peer = Peer {
                     port: ping.port,
                     timeout: Instant::now() + Duration::from_secs(10),
+                    death: None,
                 };
                 self.peers.send((id, peer)).await?;
             }

@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use anyhow::Result;
 use futures_core::Future;
-use tokio::{spawn, task::JoinHandle};
+use tokio::task::{Builder, JoinHandle};
 
 pub trait Actor {
     type Output: Send + Sync = ();
@@ -18,18 +18,18 @@ pub trait Actor {
         Self: Sized,
     {
     }
-    fn spawn(mut self) -> JoinHandle<Result<()>>
+    fn spawn(mut self, name: &'static str) -> Result<JoinHandle<Result<()>>>
     where
         Self: Sized + Send + Sync + 'static,
     {
-        spawn(async move {
+        Ok(Builder::default().name(name).spawn(async move {
             let result = match self.task().await {
                 Ok(_) => Ok(()),
                 Err(error) => Err(error),
             };
             self.shutdown();
             result
-        })
+        })?)
     }
 }
 // pub trait Message: Clone + Debug {}

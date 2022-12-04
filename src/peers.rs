@@ -16,6 +16,7 @@ use crate::actor::{Actor, Handler};
 pub struct Peer {
     pub port: u32,
     pub timeout: Instant,
+    pub death: Option<Instant>,
 }
 
 pub struct PeerTable {
@@ -54,20 +55,44 @@ impl Handler<(Uuid, Peer)> for PeerTable {
 
     fn handle(&mut self, message: (Uuid, Peer)) -> Self::Future<'_> {
         async move {
-            let (id, peer) = message;
-            if let Some(existing_peer) = self.peers.get(&id) {
-                if existing_peer.timeout == peer.timeout {
-                    self.peers.remove(&id);
-                    debug!("{:#?}", self.peers);
-                    return Ok(&());
+            let (id, new_peer) = message;
+            if let Some(old_peer) = self.peers.get_mut(&id) {
+                match (old_peer.death, new_peer.death) {
+                    // If you're already dead stop holding new funerals over and over. People
+                    // aren't sad anymore, they're just going there to hang out and talk shit
+                    // about you.
+                    (Some(_), Some(_)) => return Ok(&()),
+                    (None, Some(_)) => {
+                        // If there have been no new pings, it really did die.
+                        if old_peer.timeout == new_peer.timeout {
+                            debug!("Dead peer: {}", id.as_hyphenated().to_string());
+                            old_peer.death = new_peer.death;
+                        }
+                        // Otherwise, ignore fake deaths.
+                        return Ok(&());
+                    }
+                    (Some(death), None) => {
+                        // New live peers always get inserted unless it died after this
+                        // message's lifespan (ignore overly old messages).
+                        if death > new_peer.timeout {
+                            return Ok(&());
+                        }
+                    }
+                    // Alive and well baybee.
+                    (None, None) => (),
                 }
+            } else {
+                debug!("New peer: {}", id.as_hyphenated().to_string());
             }
-            self.peers.insert(id, peer);
-            debug!("{:#?}", self.peers);
+            self.peers.insert(id, new_peer);
             let send = self.send.clone();
             spawn(async move {
-                sleep_until(peer.timeout).await;
-                send.send((id, peer)).await?;
+                sleep_until(new_peer.timeout).await;
+                let dying_peer = Peer {
+                    death: Some(new_peer.timeout),
+                    ..new_peer.clone()
+                };
+                send.send((id, dying_peer)).await?;
                 Ok::<(), Error>(())
             });
             Ok(&())
