@@ -1,7 +1,6 @@
 use std::net::SocketAddr;
 
 use anyhow::Result;
-use async_backtrace::framed;
 use futures_util::stream::StreamExt;
 use quinn::Endpoint;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
@@ -16,7 +15,7 @@ use crate::{
     peers::PeerTable,
     ping::{PingSink, PingStream},
     quic::Quic,
-    util::yank_handle,
+    util::yank,
 };
 
 fn socket_2(port: u16) -> Result<Socket> {
@@ -34,11 +33,10 @@ fn socket_2(port: u16) -> Result<Socket> {
 pub struct Node {
     ping_sink: PingSink,
     ping_stream: PingStream,
-    peers: PeerTable,
     quic: Quic,
+    peers: PeerTable,
 }
 impl Node {
-    #[framed]
     pub async fn new(port: u16) -> Result<Self> {
         let framed = UdpFramed::new(UdpSocket::from_std(socket_2(port)?.into())?, Codec::new());
         let (sink, stream) = framed.split();
@@ -49,25 +47,27 @@ impl Node {
         let quic_port = endpoint.local_addr()?.port();
         endpoint.set_default_client_config(configure_client());
         let id = Uuid::new_v4();
-        let peers = PeerTable::new()?;
+
+        let quic = Quic::new(endpoint)?;
+        let peers = PeerTable::new(quic.senders())?;
+        let ping_sink = PingSink::new(sink, id, port, quic_port)?;
+        let ping_stream = PingStream::new(stream, id, peers.senders().clone())?;
 
         Ok(Self {
-            ping_sink: PingSink::new(sink, id, port, quic_port)?,
-            ping_stream: PingStream::new(stream, id, peers.senders().clone())?,
+            ping_sink,
+            ping_stream,
             peers,
-            quic: Quic::new(endpoint)?,
+            quic,
         })
     }
 
-    #[framed]
     pub async fn ping_task(self) -> Result<()> {
         try_join!(
-            yank_handle(self.ping_sink.spawn("ping-sink")?),
-            yank_handle(self.ping_stream.spawn("ping-stream")?),
-            yank_handle(self.peers.spawn("peers")?),
-            yank_handle(self.quic.spawn("quic")?),
+            yank(self.ping_sink.spawn("ping::sink")?),
+            yank(self.ping_stream.spawn("ping::stream")?),
+            yank(self.peers.spawn("peers")?),
+            yank(self.quic.spawn("quic")?),
         )?;
-        // question!(sink, stream, peers, quic);
         Ok(())
     }
 }

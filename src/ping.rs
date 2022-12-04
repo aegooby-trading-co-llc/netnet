@@ -16,8 +16,8 @@ use uuid::Uuid;
 use crate::{
     actor::{Actor, Handler},
     codec::Codec,
+    generated::ping::Ping,
     peers::Peer,
-    proto::ping::Ping,
 };
 
 type Sink = SplitSink<UdpFramed<Codec>, (Ping, SocketAddr)>;
@@ -108,10 +108,11 @@ impl Handler<(Ping, SocketAddr)> for PingStream {
 
     fn handle(&mut self, message: (Ping, SocketAddr)) -> Self::Future<'_> {
         async move {
-            let (ping, _addr) = message;
+            let (ping, addr) = message;
             if ping.uuid != self.uuid.as_hyphenated().to_string() {
                 let id = Uuid::parse_str(ping.uuid.as_str())?;
                 let peer = Peer {
+                    addr,
                     port: ping.port,
                     timeout: Instant::now() + Duration::from_secs(10),
                     death: None,

@@ -3,7 +3,7 @@ use bytes::BytesMut;
 use prost::Message;
 use tokio_util::codec::{Decoder, Encoder};
 
-use crate::proto::ping::Ping;
+use crate::generated::ping::Ping;
 
 pub struct Codec;
 impl Codec {

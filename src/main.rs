@@ -13,31 +13,28 @@ use tracing_subscriber::fmt::init;
 mod actor;
 mod cert;
 mod codec;
+mod generated;
 mod node;
 mod peers;
 mod ping;
 mod quic;
 mod util;
 
-mod proto {
-    pub mod ping {
-        include!(concat!(env!("OUT_DIR"), "/proto.ping.rs"));
-    }
-}
-
 use crate::node::Node;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(long)]
-    debug: Option<u16>,
-    #[arg(long)]
-    bt: bool,
+    #[arg(short = 'c', long = "console")]
+    console: Option<u16>,
+    #[arg(short = 't', long = "trace")]
+    trace: bool,
+    #[arg(short = 'b', long = "backtrace")]
+    backtrace: bool,
 }
 
 async fn __main(args: &Args) -> Result<()> {
     if cfg!(debug) {
-        set_var("RUST_LOG", "debug");
+        set_var("RUST_LOG", if args.trace { "trace" } else { "debug" });
         set_var("RUST_LIB_BACKTRACE", "1");
         set_var("RUST_BACKTRACE", "1");
     } else {
@@ -45,9 +42,9 @@ async fn __main(args: &Args) -> Result<()> {
         set_var("RUST_LIB_BACKTRACE", "0");
         set_var("RUST_BACKTRACE", "1");
     }
-    match args.debug {
+    match args.console {
         Some(port) => Builder::default()
-            .server_addr(format!("127.0.0.1:{}", port).parse::<SocketAddr>()?)
+            .server_addr(format!("127.0.0.1:{port}").parse::<SocketAddr>()?)
             .init(),
         None => init(),
     }
@@ -62,7 +59,7 @@ pub async fn main() {
     let args = Args::parse();
     if let Err(error) = __main(&args).await {
         eprintln!("{} {}", "error:".bold().red(), error);
-        if args.bt {
+        if args.backtrace {
             eprintln!("{}", error.backtrace());
         }
     }

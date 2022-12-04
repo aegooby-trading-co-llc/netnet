@@ -8,6 +8,6 @@ macro_rules! question {
     }};
 }
 
-pub async fn yank_handle<Output>(handle: JoinHandle<Result<Output>>) -> Result<Output> {
+pub async fn yank<Output>(handle: JoinHandle<Result<Output>>) -> Result<Output> {
     Ok(handle.await??)
 }
