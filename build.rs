@@ -9,7 +9,7 @@ use glob::glob;
 use prost_build::compile_protos;
 
 fn main() -> Result<()> {
-    set_var("OUT_DIR", "src/generated");
+    set_var("OUT_DIR", "src/gen");
     println!("cargo:rerun-if-changed=proto");
     if let Ok(profile) = var("PROFILE") {
         if profile.as_str() == "debug" {
