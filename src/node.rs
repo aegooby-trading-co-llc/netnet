@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
 use anyhow::Result;
+use async_backtrace::framed;
 use futures_util::stream::StreamExt;
 use quinn::Endpoint;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
@@ -14,8 +15,8 @@ use crate::{
     codec::Codec,
     peers::PeerTable,
     ping::{PingSink, PingStream},
-    question,
     quic::Quic,
+    util::yank_handle,
 };
 
 fn socket_2(port: u16) -> Result<Socket> {
@@ -23,7 +24,7 @@ fn socket_2(port: u16) -> Result<Socket> {
     socket_2.set_reuse_address(true)?;
     socket_2.set_reuse_port(true)?;
     socket_2.bind(&SockAddr::from(
-        format!("0.0.0.0:{port}").parse::<SocketAddr>()?,
+        format!("0.0.0.0:-1{port}").parse::<SocketAddr>()?,
     ))?;
     socket_2.set_broadcast(true)?;
     socket_2.set_nonblocking(true)?;
@@ -37,6 +38,7 @@ pub struct Node {
     quic: Quic,
 }
 impl Node {
+    #[framed]
     pub async fn new(port: u16) -> Result<Self> {
         let framed = UdpFramed::new(UdpSocket::from_std(socket_2(port)?.into())?, Codec::new());
         let (sink, stream) = framed.split();
@@ -57,14 +59,15 @@ impl Node {
         })
     }
 
+    #[framed]
     pub async fn ping_task(self) -> Result<()> {
-        let (sink, stream, peers, quic) = try_join!(
-            self.ping_sink.spawn(),
-            self.ping_stream.spawn(),
-            self.peers.spawn(),
-            self.quic.spawn(),
+        try_join!(
+            yank_handle(self.ping_sink.spawn()),
+            yank_handle(self.ping_stream.spawn()),
+            yank_handle(self.peers.spawn()),
+            yank_handle(self.quic.spawn()),
         )?;
-        question!(sink, stream, peers, quic);
+        // question!(sink, stream, peers, quic);
         Ok(())
     }
 }

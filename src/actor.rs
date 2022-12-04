@@ -22,12 +22,14 @@ pub trait Actor {
     where
         Self: Sized + Send + Sync + 'static,
     {
-        let handle = spawn(async move {
-            self.task().await?;
+        spawn(async move {
+            let result = match self.task().await {
+                Ok(_) => Ok(()),
+                Err(error) => Err(error),
+            };
             self.shutdown();
-            Ok(())
-        });
-        handle
+            result
+        })
     }
 }
 // pub trait Message: Clone + Debug {}
