@@ -13,7 +13,7 @@ use tracing_subscriber::fmt::init;
 mod actor;
 mod cert;
 mod codec;
-mod generated;
+mod gen;
 mod node;
 mod peers;
 mod ping;

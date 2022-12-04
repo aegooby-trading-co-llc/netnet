@@ -16,7 +16,7 @@ use uuid::Uuid;
 use crate::{
     actor::{Actor, Handler},
     codec::Codec,
-    generated::ping::Ping,
+    gen::ping::Ping,
     peers::Peer,
 };
 
