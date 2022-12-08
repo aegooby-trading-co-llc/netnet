@@ -1,60 +1,47 @@
-use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
+use std::net::SocketAddr;
 
-use anyhow::{Ok, Result};
-use futures_util::{
-    sink::SinkExt,
-    stream::{SplitSink, SplitStream, StreamExt},
-};
+use anyhow::Result;
+use futures_util::stream::StreamExt;
 use quinn::Endpoint;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
-use tokio::{
-    join,
-    net::UdpSocket,
-    spawn,
-    sync::Mutex,
-    time::{interval, sleep_until, Instant},
-};
+use tokio::{net::UdpSocket, task::JoinHandle, try_join};
 use tokio_util::udp::UdpFramed;
-use tracing::debug;
 use uuid::Uuid;
 
 use crate::{
+    actor::Actor,
+    cert::{configure_client, get_server_config},
     codec::Codec,
-    proto::ping::Ping,
-    verification::{configure_client, get_server_config},
+    peers::PeerTable,
+    ping::{PingSink, PingStream},
+    quic::Quic,
 };
 
-#[derive(Copy, Clone, Debug)]
-pub struct Peer {
-    pub port: u32,
-    pub timeout: Instant,
+pub async fn yank<Output>(handle: JoinHandle<Result<Output>>) -> Result<Output> {
+    handle.await?
 }
 
-type Sink = SplitSink<UdpFramed<Codec>, (Ping, SocketAddr)>;
-type Stream = SplitStream<UdpFramed<Codec>>;
+fn socket_2(port: u16) -> Result<Socket> {
+    let socket_2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
+    socket_2.set_reuse_address(true)?;
+    socket_2.set_reuse_port(true)?;
+    socket_2.bind(&SockAddr::from(
+        format!("0.0.0.0:{port}").parse::<SocketAddr>()?,
+    ))?;
+    socket_2.set_broadcast(true)?;
+    socket_2.set_nonblocking(true)?;
+    Ok(socket_2)
+}
 
 pub struct Node {
-    pub sink: Sink,
-    pub stream: Stream,
-    pub id: Uuid,
-    pub endpoint: Endpoint,
-    pub ping_port: u16,
-    pub quic_port: u16,
-    pub peers: Arc<Mutex<HashMap<Uuid, Peer>>>,
+    ping_sink: PingSink,
+    ping_stream: PingStream,
+    quic: Quic,
+    peers: PeerTable,
 }
 impl Node {
     pub async fn new(port: u16) -> Result<Self> {
-        let socket_2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
-        socket_2.set_reuse_address(true)?;
-        socket_2.set_reuse_port(true)?;
-        socket_2.bind(&SockAddr::from(
-            format!("0.0.0.0:{}", port).parse::<SocketAddr>()?,
-        ))?;
-        socket_2.set_broadcast(true)?;
-        socket_2.set_nonblocking(true)?;
-
-        let framed = UdpFramed::new(UdpSocket::from_std(socket_2.into())?, Codec::new());
-        let ping_port = framed.get_ref().local_addr()?.port();
+        let framed = UdpFramed::new(UdpSocket::from_std(socket_2(port)?.into())?, Codec::new());
         let (sink, stream) = framed.split();
         let mut endpoint = Endpoint::server(
             get_server_config().await?,
@@ -62,81 +49,28 @@ impl Node {
         )?;
         let quic_port = endpoint.local_addr()?.port();
         endpoint.set_default_client_config(configure_client());
+        let id = Uuid::new_v4();
+
+        let quic = Quic::new(endpoint)?;
+        let peers = PeerTable::new(quic.senders())?;
+        let ping_sink = PingSink::new(sink, id, port, quic_port)?;
+        let ping_stream = PingStream::new(stream, id, peers.senders())?;
 
         Ok(Self {
-            stream,
-            sink,
-            id: Uuid::new_v4(),
-            ping_port,
-            quic_port,
-            endpoint,
-            peers: Arc::new(Mutex::new(HashMap::<Uuid, Peer>::new())),
+            ping_sink,
+            ping_stream,
+            peers,
+            quic,
         })
     }
 
     pub async fn ping_task(self) -> Result<()> {
-        let ping_port = self.ping_port;
-        let quic_port = self.quic_port;
-        let uuid = self.id;
-
-        let mut sink = self.sink;
-        let mut stream = self.stream;
-
-        let peers_sink = self.peers.clone();
-        let peers_stream = self.peers.clone();
-
-        let _ = join!(
-            spawn(async move {
-                let mut i = interval(Duration::from_millis(1000));
-                loop {
-                    i.tick().await;
-                    {
-                        debug!("peers: {:#?}", peers_sink.try_lock()?);
-                    }
-                    let broadcasthost = format!("255.255.255.255:{}", ping_port);
-                    sink.send((
-                        Ping {
-                            port: quic_port.into(),
-                            uuid: uuid.as_hyphenated().to_string(),
-                        },
-                        broadcasthost.parse()?,
-                    ))
-                    .await?;
-                    if false {
-                        break Ok(());
-                    }
-                }
-            }),
-            spawn(async move {
-                while let Some(result) = stream.next().await {
-                    let (ping, _addr) = result?;
-                    if ping.uuid != uuid.as_hyphenated().to_string() {
-                        debug!("{:#?}", ping);
-                        let id = Uuid::parse_str(ping.uuid.as_str())?;
-                        let peer = Peer {
-                            port: ping.port,
-                            timeout: Instant::now() + Duration::from_secs(10),
-                        };
-                        {
-                            peers_stream.lock().await.insert(id, peer);
-                        }
-                        let peers_timeout = self.peers.clone();
-                        spawn(async move {
-                            sleep_until(peer.timeout).await;
-                            let mut peers = peers_timeout.lock().await;
-                            if let Some(expiry) = peers.get(&id) {
-                                if expiry.timeout == peer.timeout {
-                                    peers.remove(&id);
-                                }
-                            }
-                        });
-                    }
-                }
-                Ok(())
-            })
-        );
+        try_join!(
+            yank(self.ping_sink.spawn("ping::sink")?),
+            yank(self.ping_stream.spawn("ping::stream")?),
+            yank(self.peers.spawn("peers")?),
+            yank(self.quic.spawn("quic")?),
+        )?;
         Ok(())
     }
-
-    // pub async fn quic_connect()
 }
