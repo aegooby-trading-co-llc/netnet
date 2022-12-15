@@ -25,15 +25,27 @@ pub struct Peer {
 
 pub struct PeerTable {
     peers: HashMap<Uuid, Peer>,
+<<<<<<< Updated upstream
+=======
+    id: Uuid,
+>>>>>>> Stashed changes
     send: Sender<(Uuid, Peer)>,
     recv: Receiver<(Uuid, Peer)>,
     quic_send: Sender<QuicTarget>,
 }
 impl PeerTable {
+<<<<<<< Updated upstream
     pub fn new(quic_send: Sender<QuicTarget>) -> Result<Self> {
         let (sender, receiver) = channel(64);
         Ok(Self {
             peers: HashMap::<Uuid, Peer>::new(),
+=======
+    pub fn new(id: Uuid, quic_send: Sender<QuicTarget>) -> Result<Self> {
+        let (sender, receiver) = channel(64);
+        Ok(Self {
+            peers: HashMap::<Uuid, Peer>::new(),
+            id,
+>>>>>>> Stashed changes
             send: sender,
             recv: receiver,
             quic_send,
@@ -89,12 +101,23 @@ impl Handler<(Uuid, Peer)> for PeerTable {
                 }
             } else {
                 debug!("peer(new): {}", id.as_hyphenated().to_string());
+<<<<<<< Updated upstream
                 self.quic_send
                     .send(QuicTarget {
                         addr: new_peer.addr,
                         port: u16::try_from(new_peer.port)?,
                     })
                     .await?;
+=======
+                if self.id < id {
+                    self.quic_send
+                        .send(QuicTarget {
+                            addr: new_peer.addr,
+                            port: u16::try_from(new_peer.port)?,
+                        })
+                        .await?;
+                }
+>>>>>>> Stashed changes
             }
             self.peers.insert(id, new_peer);
             let send = self.send.clone();

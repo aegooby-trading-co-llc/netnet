@@ -47,7 +47,7 @@ mod test {
         let mut buffer = BytesMut::new();
         let ping = Ping {
             port: 8080,
-            uuid: "penis".into(),
+            uuid: "id".into(),
         };
         codec.encode(ping.clone(), &mut buffer)?;
         assert!(
