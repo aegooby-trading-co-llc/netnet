@@ -41,9 +41,5 @@ pub trait Actor {
 }
 pub trait Handler<Message: Debug> {
     type Reply = ();
-    type Future<'lt>: Future<Output = Result<&'lt Self::Reply>>
-    where
-        Self: 'lt,
-        Self::Reply: 'lt;
-    fn handle(&mut self, message: Message) -> Self::Future<'_>;
+    async fn handle(&mut self, message: Message) -> Result<()>;
 }

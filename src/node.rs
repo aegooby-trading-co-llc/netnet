@@ -49,24 +49,13 @@ impl Node {
         )?;
         let quic_port = endpoint.local_addr()?.port();
         endpoint.set_default_client_config(configure_client());
-<<<<<<< Updated upstream
-        let id = Uuid::new_v4();
 
-        let quic = Quic::new(endpoint)?;
-        let peers = PeerTable::new(quic.senders())?;
-        let ping_sink = PingSink::new(sink, id, port, quic_port)?;
-        let ping_stream = PingStream::new(stream, id, peers.senders())?;
-=======
-<<<<<<< Updated upstream
-=======
         let id = Uuid::new_v4();
 
         let quic = Quic::new(endpoint)?;
         let peers = PeerTable::new(id, quic.senders())?;
         let ping_sink = PingSink::new(sink, id, port, quic_port)?;
         let ping_stream = PingStream::new(stream, id, peers.senders())?;
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
         Ok(Self {
             ping_sink,

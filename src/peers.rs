@@ -25,27 +25,17 @@ pub struct Peer {
 
 pub struct PeerTable {
     peers: HashMap<Uuid, Peer>,
-<<<<<<< Updated upstream
-=======
     id: Uuid,
->>>>>>> Stashed changes
     send: Sender<(Uuid, Peer)>,
     recv: Receiver<(Uuid, Peer)>,
     quic_send: Sender<QuicTarget>,
 }
 impl PeerTable {
-<<<<<<< Updated upstream
-    pub fn new(quic_send: Sender<QuicTarget>) -> Result<Self> {
-        let (sender, receiver) = channel(64);
-        Ok(Self {
-            peers: HashMap::<Uuid, Peer>::new(),
-=======
     pub fn new(id: Uuid, quic_send: Sender<QuicTarget>) -> Result<Self> {
         let (sender, receiver) = channel(64);
         Ok(Self {
             peers: HashMap::<Uuid, Peer>::new(),
             id,
->>>>>>> Stashed changes
             send: sender,
             recv: receiver,
             quic_send,
@@ -69,68 +59,55 @@ impl Actor for PeerTable {
     }
 }
 impl Handler<(Uuid, Peer)> for PeerTable {
-    type Future<'lt> = impl Future<Output = Result<&'lt Self::Reply>>;
-
-    fn handle(&mut self, message: (Uuid, Peer)) -> Self::Future<'_> {
-        async move {
-            let (id, new_peer) = message;
-            if let Some(old_peer) = self.peers.get_mut(&id) {
-                match (old_peer.death, new_peer.death) {
-                    // If you're already dead stop holding new funerals over and over. People
-                    // aren't sad anymore, they're just going there to hang out and talk shit
-                    // about you.
-                    (Some(_), Some(_)) => return Ok(&()),
-                    (None, Some(_)) => {
-                        // If there have been no new pings, it really did die.
-                        if old_peer.timeout == new_peer.timeout {
-                            debug!("peer(dead): {}", id.as_hyphenated().to_string());
-                            old_peer.death = new_peer.death;
-                        }
-                        // Otherwise, ignore fake deaths.
-                        return Ok(&());
+    async fn handle(&mut self, message: (Uuid, Peer)) -> Result<()> {
+        let (id, new_peer) = message;
+        if let Some(old_peer) = self.peers.get_mut(&id) {
+            match (old_peer.death, new_peer.death) {
+                // If you're already dead stop holding new funerals over and over. People
+                // aren't sad anymore, they're just going there to hang out and talk shit
+                // about you.
+                (Some(_), Some(_)) => return Ok(()),
+                (None, Some(_)) => {
+                    // If there have been no new pings, it really did die.
+                    if old_peer.timeout == new_peer.timeout {
+                        debug!("peer(dead): {}", id.as_hyphenated().to_string());
+                        old_peer.death = new_peer.death;
                     }
-                    (Some(death), None) => {
-                        // New live peers always get inserted unless it died after this
-                        // message's lifespan (ignore overly old messages).
-                        if death > new_peer.timeout {
-                            return Ok(&());
-                        }
-                    }
-                    // Alive and well baybee.
-                    (None, None) => (),
+                    // Otherwise, ignore fake deaths.
+                    return Ok(());
                 }
-            } else {
-                debug!("peer(new): {}", id.as_hyphenated().to_string());
-<<<<<<< Updated upstream
+                (Some(death), None) => {
+                    // New live peers always get inserted unless it died after this
+                    // message's lifespan (ignore overly old messages).
+                    if death > new_peer.timeout {
+                        return Ok(());
+                    }
+                }
+                // Alive and well baybee.
+                (None, None) => (),
+            }
+        } else {
+            debug!("peer(new): {}", id.as_hyphenated().to_string());
+            if self.id < id {
                 self.quic_send
                     .send(QuicTarget {
                         addr: new_peer.addr,
                         port: u16::try_from(new_peer.port)?,
                     })
                     .await?;
-=======
-                if self.id < id {
-                    self.quic_send
-                        .send(QuicTarget {
-                            addr: new_peer.addr,
-                            port: u16::try_from(new_peer.port)?,
-                        })
-                        .await?;
-                }
->>>>>>> Stashed changes
             }
-            self.peers.insert(id, new_peer);
-            let send = self.send.clone();
-            spawn(async move {
-                sleep_until(new_peer.timeout).await;
-                let dying_peer = Peer {
-                    death: Some(new_peer.timeout),
-                    ..new_peer
-                };
-                send.send((id, dying_peer)).await?;
-                Ok::<(), Error>(())
-            });
-            Ok(&())
         }
+        self.peers.insert(id, new_peer);
+        let send = self.send.clone();
+        spawn(async move {
+            sleep_until(new_peer.timeout).await;
+            let dying_peer = Peer {
+                death: Some(new_peer.timeout),
+                ..new_peer
+            };
+            send.send((id, dying_peer)).await?;
+            Ok::<(), Error>(())
+        });
+        Ok(())
     }
 }

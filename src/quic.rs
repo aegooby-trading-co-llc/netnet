@@ -1,24 +1,13 @@
-<<<<<<< Updated upstream
-use std::net::SocketAddr;
-
-use anyhow::Result;
-use futures_core::Future;
-use quinn::{Connecting, Endpoint};
-=======
 use std::{collections::HashMap, net::SocketAddr};
 
 use anyhow::Result;
 use futures_core::Future;
 use quinn::{Connecting, Connection, Endpoint};
->>>>>>> Stashed changes
 use tokio::{
     select,
     sync::mpsc::{channel, Receiver, Sender},
 };
-<<<<<<< Updated upstream
-=======
 use tracing::debug;
->>>>>>> Stashed changes
 
 use crate::actor::{Actor, Handler};
 
@@ -30,10 +19,7 @@ pub struct QuicTarget {
 
 pub struct Quic {
     endpoint: Endpoint,
-<<<<<<< Updated upstream
-=======
     conns: HashMap<SocketAddr, Connection>,
->>>>>>> Stashed changes
     send: Sender<QuicTarget>,
     recv: Receiver<QuicTarget>,
 }
@@ -42,10 +28,7 @@ impl Quic {
         let (sender, receiver) = channel(64);
         Ok(Self {
             endpoint,
-<<<<<<< Updated upstream
-=======
             conns: HashMap::new(),
->>>>>>> Stashed changes
             send: sender,
             recv: receiver,
         })
@@ -77,46 +60,28 @@ impl Actor for Quic {
     }
 }
 impl Handler<Connecting> for Quic {
-    type Future<'lt> = impl Future<Output = Result<&'lt Self::Reply>>;
-
-    fn handle(&mut self, message: Connecting) -> Self::Future<'_> {
-        async move {
-            let conn = message.await?;
-<<<<<<< Updated upstream
-            conn.open_bi().await?;
-=======
-            debug!("quic: incoming connection successful");
-            self.conns.insert(conn.remote_address(), conn.clone());
-            debug!("{:#?}", conn.open_bi().await?);
->>>>>>> Stashed changes
-            Ok(&())
-        }
+    async fn handle(&mut self, message: Connecting) -> Result<()> {
+        let conn = message.await?;
+        debug!("quic: incoming connection successful");
+        self.conns.insert(conn.remote_address(), conn.clone());
+        debug!("{:#?}", conn.open_bi().await?);
+        Ok(())
     }
 }
-impl Handler<QuicTarget> for Quic {
-    type Future<'lt> = impl Future<Output = Result<&'lt Self::Reply>>;
 
-<<<<<<< Updated upstream
-    fn handle(&mut self, _message: QuicTarget) -> Self::Future<'_> {
-        async move {
-            // let conn = self.endpoint.connect(message.addr, "localhost")?.await?;
-            // conn.accept_bi().await?;
-=======
-    fn handle(&mut self, message: QuicTarget) -> Self::Future<'_> {
-        async move {
-            let conn = self
-                .endpoint
-                .connect(
-                    SocketAddr::new("127.0.0.1".parse()?, message.port),
-                    // SocketAddr::new(message.addr.ip(), message.port),
-                    "localhost",
-                )?
-                .await?;
-            debug!("quic: outgoing connection successful");
-            self.conns.insert(conn.remote_address(), conn.clone());
-            debug!("{:#?}", conn.accept_bi().await?);
->>>>>>> Stashed changes
-            Ok(&())
-        }
+impl Handler<QuicTarget> for Quic {
+    async fn handle(&mut self, message: QuicTarget) -> Result<()> {
+        let conn = self
+            .endpoint
+            .connect(
+                SocketAddr::new("127.0.0.1".parse()?, message.port),
+                // SocketAddr::new(message.addr.ip(), message.port),
+                "localhost",
+            )?
+            .await?;
+        debug!("quic: outgoing connection successful");
+        self.conns.insert(conn.remote_address(), conn.clone());
+        debug!("{:#?}", conn.accept_bi().await?);
+        Ok(())
     }
 }

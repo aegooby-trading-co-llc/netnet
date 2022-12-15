@@ -61,14 +61,10 @@ impl Actor for PingSink {
     }
 }
 impl Handler<Ping> for PingSink {
-    type Future<'lt> = impl Future<Output = Result<&'lt Self::Reply>>;
-
-    fn handle(&mut self, message: Ping) -> Self::Future<'_> {
-        async move {
-            let broadcasthost = format!("255.255.255.255:{}", self.port);
-            self.sink.send((message, broadcasthost.parse()?)).await?;
-            Ok(&())
-        }
+    async fn handle(&mut self, message: Ping) -> Result<()> {
+        let broadcasthost = format!("255.255.255.255:{}", self.port);
+        self.sink.send((message, broadcasthost.parse()?)).await?;
+        Ok(())
     }
 }
 
@@ -100,22 +96,18 @@ impl Actor for PingStream {
     }
 }
 impl Handler<(Ping, SocketAddr)> for PingStream {
-    type Future<'lt> = impl Future<Output = Result<&'lt Self::Reply>>;
-
-    fn handle(&mut self, message: (Ping, SocketAddr)) -> Self::Future<'_> {
-        async move {
-            let (ping, addr) = message;
-            if ping.uuid != self.uuid.as_hyphenated().to_string() {
-                let id = Uuid::parse_str(ping.uuid.as_str())?;
-                let peer = Peer {
-                    addr,
-                    port: ping.port,
-                    timeout: Instant::now() + Duration::from_secs(10),
-                    death: None,
-                };
-                self.peers.send((id, peer)).await?;
-            }
-            Ok(&())
+    async fn handle(&mut self, message: (Ping, SocketAddr)) -> Result<()> {
+        let (ping, addr) = message;
+        if ping.uuid != self.uuid.as_hyphenated().to_string() {
+            let id = Uuid::parse_str(ping.uuid.as_str())?;
+            let peer = Peer {
+                addr,
+                port: ping.port,
+                timeout: Instant::now() + Duration::from_secs(10),
+                death: None,
+            };
+            self.peers.send((id, peer)).await?;
         }
+        Ok(())
     }
 }
