@@ -40,10 +40,8 @@ impl PingSink {
     }
 }
 impl Actor for PingSink {
-    type Future<'lt> = impl Future<Output = Result<&'lt Self::Output>>;
-
     fn senders(&self) -> Self::Senders {}
-    fn task(&mut self) -> Self::Future<'_> {
+    fn task(&mut self) -> impl Future<Output = Result<Self::Output>> + Send + '_ {
         async move {
             let mut i = interval(Duration::from_millis(1000));
             loop {
@@ -54,14 +52,14 @@ impl Actor for PingSink {
                 };
                 self.handle(message).await?;
                 if false {
-                    break Ok(&());
+                    break Ok(());
                 }
             }
         }
     }
 }
 impl Handler<Ping> for PingSink {
-    async fn handle(&mut self, message: Ping) -> Result<()> {
+    async fn handle(&mut self, message: Ping) -> Result<Self::Reply> {
         let broadcasthost = format!("255.255.255.255:{}", self.port);
         self.sink.send((message, broadcasthost.parse()?)).await?;
         Ok(())
@@ -83,20 +81,18 @@ impl PingStream {
     }
 }
 impl Actor for PingStream {
-    type Future<'lt> = impl Future<Output = Result<&'lt Self::Output>>;
-
     fn senders(&self) -> Self::Senders {}
-    fn task(&mut self) -> Self::Future<'_> {
+    fn task(&mut self) -> impl Future<Output = Result<Self::Output>> + Send + '_ {
         async move {
             while let Some(message) = self.stream.next().await {
                 self.handle(message?).await?;
             }
-            Ok(&())
+            Ok(())
         }
     }
 }
 impl Handler<(Ping, SocketAddr)> for PingStream {
-    async fn handle(&mut self, message: (Ping, SocketAddr)) -> Result<()> {
+    async fn handle(&mut self, message: (Ping, SocketAddr)) -> Result<Self::Reply> {
         let (ping, addr) = message;
         if ping.uuid != self.uuid.as_hyphenated().to_string() {
             let id = Uuid::parse_str(ping.uuid.as_str())?;

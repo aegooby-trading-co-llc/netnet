@@ -2,6 +2,7 @@
 #![feature(async_fn_in_trait)]
 #![feature(associated_type_defaults)]
 #![feature(type_alias_impl_trait)]
+#![feature(return_position_impl_trait_in_trait)]
 
 use std::{env::set_var, net::SocketAddr};
 

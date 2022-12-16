@@ -44,22 +44,20 @@ impl PeerTable {
 }
 impl Actor for PeerTable {
     type Senders = Sender<(Uuid, Peer)>;
-    type Future<'lt> = impl Future<Output = Result<&'lt Self::Output>>;
-
     fn senders(&self) -> Self::Senders {
         self.send.clone()
     }
-    fn task(&mut self) -> Self::Future<'_> {
+    fn task(&mut self) -> impl Future<Output = Result<Self::Output>> + Send + '_ {
         async move {
             while let Some(message) = self.recv.recv().await {
                 self.handle(message).await?;
             }
-            Ok(&())
+            Ok(())
         }
     }
 }
 impl Handler<(Uuid, Peer)> for PeerTable {
-    async fn handle(&mut self, message: (Uuid, Peer)) -> Result<()> {
+    async fn handle(&mut self, message: (Uuid, Peer)) -> Result<Self::Reply> {
         let (id, new_peer) = message;
         if let Some(old_peer) = self.peers.get_mut(&id) {
             match (old_peer.death, new_peer.death) {

@@ -35,13 +35,11 @@ impl Quic {
     }
 }
 impl Actor for Quic {
-    type Future<'lt> = impl Future<Output = Result<&'lt Self::Output>>;
     type Senders = Sender<QuicTarget>;
-
     fn senders(&self) -> Self::Senders {
         self.send.clone()
     }
-    fn task(&mut self) -> Self::Future<'_> {
+    fn task(&mut self) -> impl Future<Output = Result<Self::Output>> + Send + '_ {
         async move {
             loop {
                 select! {
@@ -53,24 +51,25 @@ impl Actor for Quic {
                     Some(message) = self.recv.recv() => {
                         self.handle(message).await?;
                     }
-                    else => break Ok(&())
+                    else => break Ok(())
                 }
             }
         }
     }
 }
 impl Handler<Connecting> for Quic {
-    async fn handle(&mut self, message: Connecting) -> Result<()> {
+    async fn handle(&mut self, message: Connecting) -> Result<Self::Reply> {
         let conn = message.await?;
-        debug!("quic: incoming connection successful");
+        debug!("quic: incoming connection to {}", conn.remote_address());
         self.conns.insert(conn.remote_address(), conn.clone());
-        debug!("{:#?}", conn.open_bi().await?);
+        let (send, recv) = conn.open_bi().await?;
+        debug!("(send, recv): ({}, {})", send.id(), recv.id());
         Ok(())
     }
 }
 
 impl Handler<QuicTarget> for Quic {
-    async fn handle(&mut self, message: QuicTarget) -> Result<()> {
+    async fn handle(&mut self, message: QuicTarget) -> Result<Self::Reply> {
         let conn = self
             .endpoint
             .connect(
@@ -79,9 +78,10 @@ impl Handler<QuicTarget> for Quic {
                 "localhost",
             )?
             .await?;
-        debug!("quic: outgoing connection successful");
+        debug!("quic: outgoing connection to {}", conn.remote_address());
         self.conns.insert(conn.remote_address(), conn.clone());
-        debug!("{:#?}", conn.accept_bi().await?);
+        let (send, recv) = conn.accept_bi().await?;
+        debug!("(send, recv): ({}, {})", send.id(), recv.id());
         Ok(())
     }
 }
