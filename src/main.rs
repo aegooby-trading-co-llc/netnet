@@ -52,7 +52,7 @@ async fn __main(args: &Args) -> Result<()> {
     }
 
     let node = Node::new(8080u16).await?;
-    node.ping_task().await?;
+    node.spawn().await?;
     Ok(())
 }
 

@@ -4,22 +4,18 @@ use anyhow::Result;
 use futures_util::stream::StreamExt;
 use quinn::Endpoint;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
-use tokio::{net::UdpSocket, task::JoinHandle, try_join};
+use tokio::{net::UdpSocket, try_join};
 use tokio_util::udp::UdpFramed;
 use uuid::Uuid;
 
 use crate::{
     actor::Actor,
-    cert::{configure_client, get_server_config},
+    cert::{quic_client_config, quic_server_config},
     codec::Codec,
     peers::PeerTable,
     ping::{PingSink, PingStream},
     quic::Quic,
 };
-
-pub async fn yank<Output>(handle: JoinHandle<Result<Output>>) -> Result<Output> {
-    handle.await?
-}
 
 fn socket_2(port: u16) -> Result<Socket> {
     let socket_2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
@@ -44,11 +40,11 @@ impl Node {
         let framed = UdpFramed::new(UdpSocket::from_std(socket_2(port)?.into())?, Codec::new());
         let (sink, stream) = framed.split();
         let mut endpoint = Endpoint::server(
-            get_server_config().await?,
+            quic_server_config().await?,
             "127.0.0.1:0".parse::<SocketAddr>()?,
         )?;
         let quic_port = endpoint.local_addr()?.port();
-        endpoint.set_default_client_config(configure_client());
+        endpoint.set_default_client_config(quic_client_config());
 
         let id = Uuid::new_v4();
 
@@ -65,12 +61,12 @@ impl Node {
         })
     }
 
-    pub async fn ping_task(self) -> Result<()> {
+    pub async fn spawn(self) -> Result<()> {
         try_join!(
-            yank(self.ping_sink.spawn("ping::sink")?),
-            yank(self.ping_stream.spawn("ping::stream")?),
-            yank(self.peers.spawn("peers")?),
-            yank(self.quic.spawn("quic")?),
+            self.ping_sink.spawn("ping::sink"),
+            self.ping_stream.spawn("ping::stream"),
+            self.peers.spawn("peers"),
+            self.quic.spawn("quic"),
         )?;
         Ok(())
     }

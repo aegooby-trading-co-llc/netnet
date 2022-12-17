@@ -30,7 +30,7 @@ impl ServerCertVerifier for SkipServerVerification {
     }
 }
 
-pub fn configure_client() -> ClientConfig {
+pub fn quic_client_config() -> ClientConfig {
     let crypto = TlsConfig::builder()
         .with_safe_defaults()
         .with_custom_certificate_verifier(SkipServerVerification::new())
@@ -39,7 +39,7 @@ pub fn configure_client() -> ClientConfig {
     ClientConfig::new(Arc::new(crypto))
 }
 
-pub async fn get_server_config() -> Result<ServerConfig> {
+pub async fn quic_server_config() -> Result<ServerConfig> {
     let cert = generate_simple_self_signed(vec![
         "0.0.0.0".into(),
         "localhost".into(),

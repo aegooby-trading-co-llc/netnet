@@ -70,6 +70,7 @@ impl Handler<Connecting> for Quic {
 
 impl Handler<QuicTarget> for Quic {
     async fn handle(&mut self, message: QuicTarget) -> Result<Self::Reply> {
+        debug!("ping from: {}", message.addr);
         let conn = self
             .endpoint
             .connect(
