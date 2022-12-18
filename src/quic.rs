@@ -74,8 +74,7 @@ impl Handler<QuicTarget> for Quic {
         let conn = self
             .endpoint
             .connect(
-                SocketAddr::new("127.0.0.1".parse()?, message.port),
-                // SocketAddr::new(message.addr.ip(), message.port),
+                SocketAddr::new(message.addr.ip(), message.port),
                 "localhost",
             )?
             .await?;

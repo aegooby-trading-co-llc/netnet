@@ -41,7 +41,7 @@ impl Node {
         let (sink, stream) = framed.split();
         let mut endpoint = Endpoint::server(
             quic_server_config().await?,
-            "127.0.0.1:0".parse::<SocketAddr>()?,
+            "0.0.0.0:0".parse::<SocketAddr>()?,
         )?;
         let quic_port = endpoint.local_addr()?.port();
         endpoint.set_default_client_config(quic_client_config());
