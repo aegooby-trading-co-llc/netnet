@@ -73,10 +73,7 @@ impl Handler<QuicTarget> for Quic {
         debug!("ping from: {}", message.addr);
         let conn = self
             .endpoint
-            .connect(
-                SocketAddr::new(message.addr.ip(), message.port),
-                "localhost",
-            )?
+            .connect(SocketAddr::new(message.addr.ip(), message.port), "i")?
             .await?;
         debug!("quic: outgoing connection to {}", conn.remote_address());
         self.conns.insert(conn.remote_address(), conn.clone());

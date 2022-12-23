@@ -2,7 +2,7 @@ use std::{sync::Arc, time::SystemTime};
 
 use anyhow::Result;
 use quinn::{ClientConfig, ServerConfig};
-use rcgen::generate_simple_self_signed;
+use rcgen::Certificate as SelfSignedCertificate;
 use rustls::{
     client::{ServerCertVerified, ServerCertVerifier},
     Certificate, ClientConfig as TlsConfig, Error, PrivateKey, ServerName,
@@ -30,22 +30,16 @@ impl ServerCertVerifier for SkipServerVerification {
     }
 }
 
-pub fn quic_client_config() -> ClientConfig {
+pub fn quic_client_config(cert: &SelfSignedCertificate) -> Result<ClientConfig> {
     let crypto = TlsConfig::builder()
         .with_safe_defaults()
         .with_custom_certificate_verifier(SkipServerVerification::new())
-        .with_no_client_auth();
+        .with_single_cert(vec![], PrivateKey(cert.serialize_private_key_der()))?;
 
-    ClientConfig::new(Arc::new(crypto))
+    Ok(ClientConfig::new(Arc::new(crypto)))
 }
 
-pub async fn quic_server_config() -> Result<ServerConfig> {
-    let cert = generate_simple_self_signed(vec![
-        "0.0.0.0".into(),
-        "localhost".into(),
-        "127.0.0.1".into(),
-    ])?;
-
+pub fn quic_server_config(cert: &SelfSignedCertificate) -> Result<ServerConfig> {
     let server_config = ServerConfig::with_single_cert(
         vec![Certificate(cert.serialize_der()?)],
         PrivateKey(cert.serialize_private_key_der()),
