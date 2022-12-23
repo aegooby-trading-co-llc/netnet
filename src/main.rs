@@ -4,11 +4,14 @@
 #![feature(type_alias_impl_trait)]
 #![feature(return_position_impl_trait_in_trait)]
 
-use std::{env::set_var, net::SocketAddr};
+use std::env::set_var;
+#[cfg(feature = "console")]
+use std::net::SocketAddr;
 
 use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
+#[cfg(feature = "console")]
 use console_subscriber::Builder;
 use tokio::main;
 use tracing_subscriber::fmt::init;
@@ -45,10 +48,11 @@ async fn __main(args: &Args) -> Result<()> {
         set_var("RUST_BACKTRACE", "1");
     }
     match args.console {
+        #[cfg(feature = "console")]
         Some(port) => Builder::default()
             .server_addr(format!("127.0.0.1:{port}").parse::<SocketAddr>()?)
             .init(),
-        None => init(),
+        _ => init(),
     }
 
     let node = Node::new(8080u16).await?;
