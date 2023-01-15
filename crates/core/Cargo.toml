@@ -1,0 +1,39 @@
+[package]
+name = "netnet-core"
+version = "0.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+console = ["dep:console-subscriber"]
+
+[dependencies]
+anyhow = { version = "1.0.66", features = ["backtrace"] }
+bytes = "1.2.1"
+clap = { version = "4.0.27", features = ["derive"] }
+colored = "2.0.0"
+console-subscriber = { version = "0.1.8", optional = true }
+futures-core = "0.3.25"
+futures-sink = "0.3.25"
+futures-util = { version = "0.3.25", features = ["sink"] }
+mio = "0.8.5"
+prost = "0.11.2"
+prost-types = "0.11.2"
+quinn = "0.9.1"
+rcgen = "0.10.0"
+rustls = { version = "0.20.7", features = ["dangerous_configuration", "quic"] }
+socket2 = { version = "0.4.7", features = ["all"] }
+tokio = { version = "1.21.2", features = ["full", "socket2", "mio", "tracing"] }
+tokio-util = { version = "0.7.4", features = ["full"] }
+tracing = "0.1.37"
+tracing-subscriber = "0.3.16"
+uuid = { version = "1.2.2", features = ["v5"] }
+
+[build-dependencies]
+anyhow = "1.0.66"
+glob = "0.3.0"
+prost-build = "0.11.2"
+
+[target."cfg(loom)".dependencies]
+loom = "0.5.6"
