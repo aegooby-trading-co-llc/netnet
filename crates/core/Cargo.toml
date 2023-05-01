@@ -22,7 +22,7 @@ prost = "0.11.2"
 prost-types = "0.11.2"
 quinn = "0.9.1"
 rcgen = "0.10.0"
-rustls = { version = "0.20.7", features = ["dangerous_configuration", "quic"] }
+rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
 socket2 = { version = "0.4.7", features = ["all"] }
 tokio = { version = "1.21.2", features = ["full", "socket2", "mio", "tracing"] }
 tokio-util = { version = "0.7.4", features = ["full"] }
